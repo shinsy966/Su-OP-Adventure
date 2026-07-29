@@ -1,0 +1,9 @@
+{
+  "name": "Su-OP Adventure",
+  "short_name": "Su-OP",
+  "description": "Su-OP Adventure 게임",
+  "start_url": "/Su-OP-Adventure/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5"
+}
