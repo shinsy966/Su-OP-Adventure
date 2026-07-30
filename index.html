@@ -387,6 +387,7 @@
         upgrades: { attack: 0, health: 0, pickup: 0, speed: 0 },
         claimed: {},
         claimedRewards: {},
+        stage1Cleared: false,
         stats: { maxLevel: 1, enemies: 0, bosses: 0 },
       };
       try {
@@ -403,6 +404,7 @@
           claimed: saved.claimed || {},
           // 이전 저장 파일에서 이미 수령한 업적은 기존 보상 1개를 받은 것으로 처리한다.
           claimedRewards: saved.claimedRewards || Object.fromEntries(Object.keys(saved.claimed || {}).map((key) => [key, 1])),
+          stage1Cleared: Boolean(saved.stage1Cleared) || Number(saved.stats?.bosses) >= 2,
           stats: {
             maxLevel: Math.max(1, Number(saved.stats?.maxLevel) || 1),
             enemies: Math.max(0, Number(saved.stats?.enemies) || 0),
@@ -738,6 +740,7 @@
       bossSpawned = false;
       runStats.bosses += 1;
       profile.stats.bosses += 1;
+      if (isFinalBoss && currentStage === 1) profile.stage1Cleared = true;
       saveProfile();
       if (isFinalBoss) {
         victory = true;
@@ -2900,6 +2903,28 @@
       ctx.fillText(`보유 토큰: ${profile.tokens}`, 650, 500);
     }
 
+    function drawStageSelect() {
+      drawMenuBackground();
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f5f3ff';
+      ctx.font = `bold ${MOBILE_LAYOUT ? 40 : 48}px "IBM Plex Sans KR", "Malgun Gothic", sans-serif`;
+      ctx.fillText('스테이지 선택', WIDTH / 2, MOBILE_LAYOUT ? 190 : 150);
+      ctx.fillStyle = '#c4b5fd';
+      ctx.font = `18px "IBM Plex Sans KR", "Malgun Gothic", sans-serif`;
+      ctx.fillText('시작할 스테이지를 선택하세요', WIDTH / 2, MOBILE_LAYOUT ? 228 : 190);
+
+      if (MOBILE_LAYOUT) {
+        drawButton(54, 286, WIDTH - 108, 72, '스테이지 1 · 연구 시설');
+        drawButton(54, 388, WIDTH - 108, 72, '스테이지 2 · 설원');
+        drawButton(150, 530, 240, 56, '뒤로');
+        return;
+      }
+
+      drawButton(210, 280, 250, 82, '스테이지 1 · 연구 시설');
+      drawButton(500, 280, 250, 82, '스테이지 2 · 설원');
+      drawButton(370, 430, 180, 56, '뒤로');
+    }
+
     function drawUpgrades() {
       drawMenuBackground();
       if (MOBILE_LAYOUT) {
@@ -3118,6 +3143,14 @@
       saveProfile();
     }
 
+    function openStageSelectOrStart() {
+      if (profile.stage1Cleared) {
+        screen = 'stageSelect';
+        return;
+      }
+      startGame(1);
+    }
+
     function startGame(stage = 1) {
       currentStage = stage;
       resetGame();
@@ -3210,6 +3243,10 @@
     function draw() {
       if (screen === 'menu') {
         drawMainMenu();
+        return;
+      }
+      if (screen === 'stageSelect') {
+        drawStageSelect();
         return;
       }
       if (screen === 'upgrades') {
@@ -3414,14 +3451,26 @@
       }
       if (screen === 'menu') {
         if (MOBILE_LAYOUT) {
-        if (isInside(x, y, 54, 382, WIDTH - 108, 68)) startGame();
+        if (isInside(x, y, 54, 382, WIDTH - 108, 68)) openStageSelectOrStart();
         if (isInside(x, y, 54, 472, WIDTH - 108, 68)) screen = 'upgrades';
         if (isInside(x, y, 54, 562, WIDTH - 108, 68)) screen = 'achievements';
         if (isInside(x, y, 54, 382, WIDTH - 108, 248)) return;
         }
-        if (isInside(x, y, 520, 180, 260, 76)) startGame();
+        if (isInside(x, y, 520, 180, 260, 76)) openStageSelectOrStart();
         if (isInside(x, y, 520, 280, 260, 76)) screen = 'upgrades';
         if (isInside(x, y, 520, 380, 260, 76)) screen = 'achievements';
+        return;
+      }
+      if (screen === 'stageSelect') {
+        if (MOBILE_LAYOUT) {
+          if (isInside(x, y, 54, 286, WIDTH - 108, 72)) startGame(1);
+          if (isInside(x, y, 54, 388, WIDTH - 108, 72)) startGame(2);
+          if (isInside(x, y, 150, 530, 240, 56)) screen = 'menu';
+          return;
+        }
+        if (isInside(x, y, 210, 280, 250, 82)) startGame(1);
+        if (isInside(x, y, 500, 280, 250, 82)) startGame(2);
+        if (isInside(x, y, 370, 430, 180, 56)) screen = 'menu';
         return;
       }
       if (screen === 'upgrades') {
