@@ -2408,6 +2408,7 @@
       ctx.fillStyle = '#bae6fd';
       ctx.font = '16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.fillText('오른쪽 위 버튼을 누르면 게임을 계속합니다.', WIDTH / 2, 372);
+      drawButton(WIDTH - 96, 280, 60, 42, '닫기');
       drawButton(78, 414, WIDTH - 156, 54, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
       drawButton(78, 484, WIDTH - 156, 54, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
       drawButton(78, 554, WIDTH - 156, 54, '메인으로');
@@ -2425,6 +2426,7 @@
       ctx.fillStyle = '#bae6fd';
       ctx.font = '18px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.fillText('오른쪽 위 일시정지 아이콘을 한 번 더 누르면 게임을 재개합니다.', WIDTH / 2, 230);
+      drawButton(610, 134, 64, 44, '닫기');
       drawButton(242, 290, 180, 58, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
       drawButton(438, 290, 180, 58, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
       drawButton(340, 370, 180, 52, '나가기');
@@ -2885,6 +2887,10 @@
       }
       if (screen === 'game' && gamePaused) {
         if (MOBILE_LAYOUT) {
+        if (isInside(x, y, WIDTH - 96, 280, 60, 42)) {
+          toggleGamePause();
+          return;
+        }
         if (isInside(x, y, 78, 414, WIDTH - 156, 54)) {
           soundSettings.bgm = !soundSettings.bgm;
           syncBgm();
@@ -2900,6 +2906,9 @@
           exitToMainMenu();
           return;
         }
+        } else if (isInside(x, y, 610, 134, 64, 44)) {
+          toggleGamePause();
+          return;
         }
         if (isInside(x, y, 242, 290, 180, 58)) {
           soundSettings.bgm = !soundSettings.bgm;
