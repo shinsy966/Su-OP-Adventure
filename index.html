@@ -48,7 +48,7 @@
       aspect-ratio: 9 / 16;
     }
     html[data-layout="desktop"] canvas {
-      width: min(calc(100vw - 16px), calc((100dvh - 16px) * 43 / 31));
+      width: min(calc(100vw - 120px), calc((100dvh - 120px) * 43 / 31));
       aspect-ratio: 43 / 31;
     }
     @media (max-width: 700px) {
@@ -99,10 +99,10 @@
     const wingedShoeImage = new Image();
     wingedShoeImage.onload = () => {
       const processed = document.createElement('canvas');
-      processed.width = wingedShoeImage.naturalWidth;
-      processed.height = wingedShoeImage.naturalHeight;
+      processed.width = 512;
+      processed.height = 512;
       const processedCtx = processed.getContext('2d');
-      processedCtx.drawImage(wingedShoeImage, 0, 0);
+      processedCtx.drawImage(wingedShoeImage, 0, 0, processed.width, processed.height);
       const pixels = processedCtx.getImageData(0, 0, processed.width, processed.height);
       for (let i = 0; i < pixels.data.length; i += 4) {
         const red = pixels.data[i];
@@ -113,7 +113,7 @@
       processedCtx.putImageData(pixels, 0, 0);
       augmentIconImages.speed = processed;
     };
-    wingedShoeImage.src = 'assets/augment-winged-shoe.png';
+    wingedShoeImage.src = 'assets/augment-speed-boot-chroma.png';
 
     const keys = {};
     const touchMovement = {
@@ -2247,7 +2247,6 @@
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#c4b5fd';
       ctx.font = '15px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
-      ctx.fillText('원하는 증강의 번호 키를 누르세요', WIDTH / 2, 168);
 
       const cardWidth = 225;
       const cardHeight = 300;
@@ -2407,7 +2406,6 @@
       ctx.fillText('일시정지', WIDTH / 2, 332);
       ctx.fillStyle = '#bae6fd';
       ctx.font = '16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
-      ctx.fillText('오른쪽 위 버튼을 누르면 게임을 계속합니다.', WIDTH / 2, 372);
       drawButton(WIDTH - 96, 280, 60, 42, '닫기');
       drawButton(78, 414, WIDTH - 156, 54, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
       drawButton(78, 484, WIDTH - 156, 54, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
@@ -2425,7 +2423,6 @@
       ctx.fillText('일시정지', WIDTH / 2, 190);
       ctx.fillStyle = '#bae6fd';
       ctx.font = '18px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
-      ctx.fillText('오른쪽 위 일시정지 아이콘을 한 번 더 누르면 게임을 재개합니다.', WIDTH / 2, 230);
       drawButton(610, 134, 64, 44, '닫기');
       drawButton(242, 290, 180, 58, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
       drawButton(438, 290, 180, 58, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
