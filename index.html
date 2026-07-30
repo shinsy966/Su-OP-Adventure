@@ -88,11 +88,11 @@
       zombie: { file: 'sprite-slime-zombie.png', crop: [0.53, 0.23, 0.45, 0.55] },
       miniBoss1: { file: 'sprite-boss-golem.png', crop: [0.05, 0.05, 0.90, 0.90] },
       miniBoss2: { file: 'sprite-boss-dragon.png', crop: [0.01, 0.18, 0.98, 0.68] },
-      frostWolf: { file: 'sprites-stage2-chroma.png', crop: [0.006, 0.006, 0.321, 0.486], chroma: true },
-      iceSpirit: { file: 'sprites-stage2-chroma.png', crop: [0.339, 0.006, 0.321, 0.486], chroma: true },
-      iceKnight: { file: 'sprites-stage2-chroma.png', crop: [0.673, 0.006, 0.321, 0.486], chroma: true },
-      iceDragon: { file: 'sprites-stage2-chroma.png', crop: [0.006, 0.506, 0.321, 0.486], chroma: true },
-      iceGolem: { file: 'sprites-stage2-chroma.png', crop: [0.339, 0.506, 0.321, 0.486], chroma: true },
+      frostWolf: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.006, 0.006, 0.321, 0.486], chroma: true },
+      iceSpirit: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.339, 0.006, 0.321, 0.486], chroma: true },
+      iceKnight: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.673, 0.006, 0.321, 0.486], chroma: true },
+      iceDragon: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.006, 0.506, 0.321, 0.486], chroma: true },
+      iceGolem: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.339, 0.506, 0.321, 0.486], chroma: true },
     };
     const spriteImages = {};
     Object.entries(SPRITE_ASSETS).forEach(([name, asset]) => {
@@ -132,10 +132,10 @@
         spriteImages[name] = processed;
       });
     };
-    stage2SpriteSheet.src = 'assets/sprites-stage2-chroma.png';
+    stage2SpriteSheet.src = 'assets/sprites-stage2-dusk-chroma.png';
 
     const snowBackgroundImage = new Image();
-    snowBackgroundImage.src = 'assets/background-snowfield.png';
+    snowBackgroundImage.src = 'assets/background-snowfield-dusk.png';
 
     const augmentSheetImage = new Image();
     augmentSheetImage.onload = () => {
@@ -1426,10 +1426,10 @@
         const startY = Math.floor(camera.y / tileSize) * tileSize - tileSize;
         const endX = camera.x + WIDTH + tileSize;
         const endY = camera.y + HEIGHT + tileSize;
-        ctx.fillStyle = '#d9e2f4';
+        ctx.fillStyle = '#182744';
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
         ctx.save();
-        ctx.globalAlpha = 0.84;
+        ctx.globalAlpha = 0.94;
         ctx.translate(-camera.x, -camera.y);
         for (let x = startX; x <= endX; x += tileSize) {
           for (let y = startY; y <= endY; y += tileSize) {
@@ -1437,7 +1437,7 @@
           }
         }
         ctx.restore();
-        ctx.fillStyle = 'rgba(21, 32, 60, 0.10)';
+        ctx.fillStyle = 'rgba(8, 16, 37, 0.16)';
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
         return;
       }
