@@ -891,14 +891,15 @@
         speed: isSnowStage ? 108 : 99,
         damage: difficulty.bossContactDamage,
         projectileDamage: difficulty.bossProjectileDamage,
-        cooldown: isChargeBoss ? 2.2 + Math.random() * 2.5 : 3 + Math.random() * 7,
+        // Level 20 must show its first attack quickly, before its first dash.
+        cooldown: isChargeBoss ? 1.4 : 3 + Math.random() * 7,
         color: '#f87171',
         attackRange: 420,
         sprite: isSnowStage ? (bossLevel === 10 ? 'iceDragon' : 'iceGolem') : ['miniBoss1', 'miniBoss2'][runStats.bosses % 2],
         level: bossLevel,
         isChargeBoss,
         chargeState: 'idle',
-        chargeCooldown: isChargeBoss ? 5.5 : Infinity,
+        chargeCooldown: isChargeBoss ? 3.2 : Infinity,
         chargeTimer: 0,
         chargeDirection: null,
         chargeHitPlayer: false,
@@ -1208,15 +1209,20 @@
 
     function fireBossMissiles(activeBoss = boss) {
       if (!activeBoss) return;
-      const missileCount = activeBoss.level === 20 ? 32 : 16;
-      const missileSpeed = activeBoss.level === 20 ? 340 : 270;
-      const startingAngle = Math.random() * Math.PI * 2;
+      const isLevelTwenty = activeBoss.level === 20;
+      const missileCount = isLevelTwenty ? 11 : 16;
+      const missileSpeed = isLevelTwenty ? 390 : 270;
+      const baseAngle = isLevelTwenty
+        ? Math.atan2(player.y - activeBoss.y, player.x - activeBoss.x)
+        : Math.random() * Math.PI * 2;
       for (let i = 0; i < missileCount; i++) {
-        const angle = startingAngle + (i / missileCount) * Math.PI * 2;
+        const angle = isLevelTwenty
+          ? baseAngle + (i - (missileCount - 1) / 2) * 0.115
+          : baseAngle + (i / missileCount) * Math.PI * 2;
         attacks.push({
           x: activeBoss.x,
           y: activeBoss.y,
-          radius: activeBoss.level === 20 ? 12 : 10,
+          radius: isLevelTwenty ? 12 : 10,
           vx: Math.cos(angle) * missileSpeed,
           vy: Math.sin(angle) * missileSpeed,
           damage: activeBoss.projectileDamage,
@@ -1334,10 +1340,12 @@
         if (activeBoss.slamCooldown <= 0) triggerRockStrike(activeBoss);
       }
 
-      if (activeBoss.chargeState !== 'prepare' && activeBoss.chargeState !== 'charge') {
+      // Projectile attacks run independently of dash preparation. This keeps
+      // the level 20 boss threatening even when it is about to charge.
+      if (activeBoss.chargeState !== 'charge') {
         activeBoss.cooldown -= delta;
         if (activeBoss.cooldown <= 0) {
-          activeBoss.cooldown = activeBoss.level === 20 ? 2.2 + Math.random() * 2.5 : 3 + Math.random() * 7;
+          activeBoss.cooldown = activeBoss.level === 20 ? 2.7 + Math.random() * 1.4 : 3 + Math.random() * 7;
           fireBossMissiles(activeBoss);
         }
       }
@@ -3332,17 +3340,21 @@
     function recoverLevel20BossState(error) {
       if (screen !== 'game' || !boss || boss.level !== 20) return false;
       console.error('Recovered level 20 boss state', error);
-      boss.chargeState = 'idle';
-      boss.chargeCooldown = 4.5;
-      boss.chargeTimer = 0;
-      boss.chargeDirection = null;
-      boss.chargeHitPlayer = false;
-      boss.chargeCount = 0;
-      boss.cooldown = 2.5;
-      boss.slamCooldown = currentStage === 2 ? 7.5 : Infinity;
-      boss.slamPunchTimer = 0;
-      bossStrikeZones.length = 0;
-      rockImpacts.length = 0;
+      // Do not reset valid cooldowns on every recovered frame. Repeated
+      // recovery used to keep the boss permanently waiting to attack.
+      if (!['idle', 'prepare', 'charge'].includes(boss.chargeState)) boss.chargeState = 'idle';
+      if (!Number.isFinite(boss.chargeCooldown)) boss.chargeCooldown = 1.6;
+      if (!Number.isFinite(boss.chargeTimer)) boss.chargeTimer = 0;
+      if (!Number.isFinite(boss.cooldown)) boss.cooldown = 0.8;
+      if (!Number.isFinite(boss.chargeCount)) boss.chargeCount = 0;
+      if (!Number.isFinite(boss.slamCooldown)) boss.slamCooldown = currentStage === 2 ? 4.5 : Infinity;
+      if (!Number.isFinite(boss.slamPunchTimer)) boss.slamPunchTimer = 0;
+      if (boss.chargeDirection
+        && (!Number.isFinite(boss.chargeDirection.x) || !Number.isFinite(boss.chargeDirection.y))) {
+        boss.chargeDirection = null;
+        boss.chargeState = 'prepare';
+        boss.chargeTimer = 0.35;
+      }
       return true;
     }
 

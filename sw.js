@@ -1,4 +1,4 @@
-const CACHE_NAME = 'su-op-adventure-v28';
+const CACHE_NAME = 'su-op-adventure-v29';
 const APP_SHELL = [
   './',
   './index.html',
