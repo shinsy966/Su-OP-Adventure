@@ -486,15 +486,25 @@
     }
 
     function isAchievementClaimed(achievement) {
-      return getClaimedReward(achievement) >= achievement.reward;
+      // `claimed` is written at the exact moment the player checks an
+      // achievement. Prefer it for UI state so an old reward-history value
+      // cannot leave the menu notification lit after collection.
+      return Boolean(profile.claimed?.[achievement.key]) || getClaimedReward(achievement) >= achievement.reward;
+    }
+
+    function getClaimableAchievements() {
+      return ACHIEVEMENTS.filter((achievement) => (
+        isAchievementUnlocked(achievement) && !isAchievementClaimed(achievement)
+      ));
     }
 
     function hasUnclaimedAchievement() {
-      return ACHIEVEMENTS.some((achievement) => isAchievementUnlocked(achievement) && !isAchievementClaimed(achievement));
+      return getClaimableAchievements().length > 0;
     }
 
     function hasAvailableUpgrade() {
-      return profile.tokens > 0 && UPGRADE_OPTIONS.some((option) => profile.upgrades[option.key] < MAX_UPGRADE_LEVEL);
+      return Math.floor(profile.tokens) >= 1
+        && UPGRADE_OPTIONS.some((option) => profile.upgrades[option.key] < MAX_UPGRADE_LEVEL);
     }
 
     function applyPermanentUpgrades() {
