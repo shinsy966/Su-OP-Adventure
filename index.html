@@ -533,6 +533,11 @@
       return SHURIKEN_BOSS_DAMAGE_BY_RANK[player.shurikenRank] || 0;
     }
 
+    function getFireZoneDamage(rank = player.fireZoneRank) {
+      const baseDamage = 15 + rank * 4;
+      return baseDamage * (currentStage === 2 ? 1.15 : 1);
+    }
+
     function getShieldDamageReduction() {
       return player.shieldRank * 0.1;
     }
@@ -812,7 +817,7 @@
         { id: 'pierce', label: '투사체 관통', detail: '게임당 1회 · 적을 관통', apply: () => { player.pierce = true; } },
         { id: 'extraShot', label: `투사체 증가 (${player.extraShots}/3)`, detail: '공격할 때 총알 +1', apply: () => { player.extraShots += 1; } },
         { id: 'shuriken', label: `표창 공격 (${player.shurikenRank}/3)`, detail: '5초 회전 · 3초 재사용 대기', apply: () => { if (player.shurikenRank === 0) player.shurikenCycleStart = elapsed; player.shurikenRank += 1; } },
-        { id: 'fireZone', label: `불덩이 장판 (${player.fireZoneRank}/3)`, detail: `밀집 지역에 투하, 0.35초마다 ${15 + (player.fireZoneRank + 1) * 4}피해`, apply: () => { player.fireZoneRank += 1; } },
+        { id: 'fireZone', label: `불덩이 장판 (${player.fireZoneRank}/3)`, detail: `밀집 지역에 투하, 0.35초마다 ${Math.round(getFireZoneDamage(player.fireZoneRank + 1))}피해${currentStage === 2 ? ' · 설원 피해 +15%' : ''}`, apply: () => { player.fireZoneRank += 1; } },
         { id: 'shield', label: `방어막 (${player.shieldRank}/3)`, detail: `0.4초마다 ${getShieldDamage(player.shieldRank + 1)} 피해 · 피해 감소 ${(player.shieldRank + 1) * 10}%`, apply: () => { player.shieldRank += 1; } },
       ];
       return pool.filter((augment) => {
@@ -1052,12 +1057,12 @@
         for (let j = enemies.length - 1; j >= 0; j--) {
           const enemy = enemies[j];
           if (Math.hypot(zone.x - enemy.x, zone.y - enemy.y) < zone.radius + enemy.radius) {
-            enemy.hp -= (15 + player.fireZoneRank * 4) * player.attackMult;
+            enemy.hp -= getFireZoneDamage() * player.attackMult;
             if (enemy.hp <= 0) defeatEnemy(j);
           }
         }
         if (boss && Math.hypot(zone.x - boss.x, zone.y - boss.y) < zone.radius + boss.radius) {
-          damageBoss((15 + player.fireZoneRank * 4) * player.attackMult);
+          damageBoss(getFireZoneDamage() * player.attackMult);
         }
       }
 
@@ -1082,29 +1087,31 @@
       }
     }
 
-    function moveBossTowardPlayer(delta) {
-      const dx = player.x - boss.x;
-      const dy = player.y - boss.y;
+    function moveBossTowardPlayer(delta, activeBoss = boss) {
+      if (!activeBoss) return;
+      const dx = player.x - activeBoss.x;
+      const dy = player.y - activeBoss.y;
       const distance = Math.hypot(dx, dy);
       if (distance > 20) {
-        boss.x += (dx / distance) * Math.min(boss.speed * delta, distance);
-        boss.y += (dy / distance) * Math.min(boss.speed * delta, distance);
+        activeBoss.x += (dx / distance) * Math.min(activeBoss.speed * delta, distance);
+        activeBoss.y += (dy / distance) * Math.min(activeBoss.speed * delta, distance);
       }
     }
 
-    function fireBossMissiles() {
-      const missileCount = boss.level === 20 ? 32 : 16;
-      const missileSpeed = boss.level === 20 ? 340 : 270;
+    function fireBossMissiles(activeBoss = boss) {
+      if (!activeBoss) return;
+      const missileCount = activeBoss.level === 20 ? 32 : 16;
+      const missileSpeed = activeBoss.level === 20 ? 340 : 270;
       const startingAngle = Math.random() * Math.PI * 2;
       for (let i = 0; i < missileCount; i++) {
         const angle = startingAngle + (i / missileCount) * Math.PI * 2;
         attacks.push({
-          x: boss.x,
-          y: boss.y,
-          radius: boss.level === 20 ? 12 : 10,
+          x: activeBoss.x,
+          y: activeBoss.y,
+          radius: activeBoss.level === 20 ? 12 : 10,
           vx: Math.cos(angle) * missileSpeed,
           vy: Math.sin(angle) * missileSpeed,
-          damage: boss.projectileDamage,
+          damage: activeBoss.projectileDamage,
           life: 3.0,
           color: '#fb7185',
           owner: 'boss',
@@ -1119,18 +1126,19 @@
       attacks.push({
         x: enemy.x,
         y: enemy.y,
-        radius: 9,
+        radius: 10,
         vx: (dx / distance) * 220,
         vy: (dy / distance) * 220,
         damage: 12,
         life: 2.4,
         color: '#a5f3fc',
         owner: 'enemy',
+        style: 'iceBolt',
       });
     }
 
-    function triggerRockStrike() {
-      if (!boss) return;
+    function triggerRockStrike(activeBoss = boss) {
+      if (!activeBoss) return;
       const count = 3 + Math.floor(Math.random() * 2);
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
@@ -1144,69 +1152,82 @@
           beepTimer: 0.22,
         });
       }
-      boss.slamCooldown = 8.5 + Math.random() * 2.5;
-      boss.slamPunchTimer = 0.55;
+      activeBoss.slamCooldown = 8.5 + Math.random() * 2.5;
+      activeBoss.slamPunchTimer = 0.55;
       playSfx('bossAlert');
     }
 
     function updateBossBehavior(delta) {
-      boss.slamPunchTimer = Math.max(0, (boss.slamPunchTimer || 0) - delta);
-      if (!boss.isChargeBoss || boss.chargeState === 'idle') {
-        moveBossTowardPlayer(delta);
+      if (!boss) return;
+      const activeBoss = boss;
+      if (!['idle', 'prepare', 'charge'].includes(activeBoss.chargeState)) activeBoss.chargeState = 'idle';
+      if (!Number.isFinite(activeBoss.chargeTimer)) activeBoss.chargeTimer = 0;
+      if (currentStage === 2 && activeBoss.level === 20 && !Number.isFinite(activeBoss.slamCooldown)) {
+        activeBoss.slamCooldown = 7.5;
+      }
+      activeBoss.slamPunchTimer = Math.max(0, (activeBoss.slamPunchTimer || 0) - delta);
+      if (!activeBoss.isChargeBoss || activeBoss.chargeState === 'idle') {
+        moveBossTowardPlayer(delta, activeBoss);
       }
 
-      if (boss.isChargeBoss) {
-        if (boss.chargeState === 'idle') {
-          boss.chargeCooldown -= delta;
-          if (boss.chargeCooldown <= 0) {
-            boss.chargeState = 'prepare';
-            boss.chargeTimer = 1;
-            boss.chargeDirection = null;
-            boss.chargeCount = 1;
+      if (activeBoss.isChargeBoss) {
+        if (activeBoss.chargeState === 'idle') {
+          activeBoss.chargeCooldown -= delta;
+          if (activeBoss.chargeCooldown <= 0) {
+            activeBoss.chargeState = 'prepare';
+            activeBoss.chargeTimer = 1;
+            activeBoss.chargeDirection = null;
+            activeBoss.chargeCount = 1;
           }
-        } else if (boss.chargeState === 'prepare') {
-          boss.chargeTimer -= delta;
-          if (!boss.chargeDirection && boss.chargeTimer <= 0.5) {
-            const dx = player.x - boss.x;
-            const dy = player.y - boss.y;
+        } else if (activeBoss.chargeState === 'prepare') {
+          activeBoss.chargeTimer -= delta;
+          if (!activeBoss.chargeDirection && activeBoss.chargeTimer <= 0.5) {
+            const dx = player.x - activeBoss.x;
+            const dy = player.y - activeBoss.y;
             const distance = Math.hypot(dx, dy) || 1;
-            boss.chargeDirection = { x: dx / distance, y: dy / distance };
+            activeBoss.chargeDirection = { x: dx / distance, y: dy / distance };
           }
-          if (boss.chargeTimer <= 0) {
-            boss.chargeState = 'charge';
-            boss.chargeTimer = 0.55;
-            boss.chargeHitPlayer = false;
+          if (activeBoss.chargeTimer <= 0) {
+            activeBoss.chargeState = 'charge';
+            activeBoss.chargeTimer = 0.55;
+            activeBoss.chargeHitPlayer = false;
           }
-        } else if (boss.chargeState === 'charge') {
+        } else if (activeBoss.chargeState === 'charge') {
+          if (!activeBoss.chargeDirection || !Number.isFinite(activeBoss.chargeDirection.x) || !Number.isFinite(activeBoss.chargeDirection.y)) {
+            activeBoss.chargeState = 'prepare';
+            activeBoss.chargeTimer = 0.35;
+            activeBoss.chargeDirection = null;
+            return;
+          }
           const chargeSpeed = currentStage === 2 ? 1220 : 1100;
-          boss.x = clamp(boss.x + boss.chargeDirection.x * chargeSpeed * delta, boss.radius, WORLD_WIDTH - boss.radius);
-          boss.y = clamp(boss.y + boss.chargeDirection.y * chargeSpeed * delta, boss.radius, WORLD_HEIGHT - boss.radius);
-          boss.chargeTimer -= delta;
-          if (boss.chargeTimer <= 0) {
-            if (currentStage === 2 && boss.chargeCount < 2) {
-              boss.chargeCount += 1;
-              boss.chargeState = 'prepare';
-              boss.chargeTimer = 0.48;
-              boss.chargeDirection = null;
+          activeBoss.x = clamp(activeBoss.x + activeBoss.chargeDirection.x * chargeSpeed * delta, activeBoss.radius, WORLD_WIDTH - activeBoss.radius);
+          activeBoss.y = clamp(activeBoss.y + activeBoss.chargeDirection.y * chargeSpeed * delta, activeBoss.radius, WORLD_HEIGHT - activeBoss.radius);
+          activeBoss.chargeTimer -= delta;
+          if (activeBoss.chargeTimer <= 0) {
+            if (currentStage === 2 && activeBoss.chargeCount < 2) {
+              activeBoss.chargeCount += 1;
+              activeBoss.chargeState = 'prepare';
+              activeBoss.chargeTimer = 0.48;
+              activeBoss.chargeDirection = null;
             } else {
-              boss.chargeState = 'idle';
-              boss.chargeCooldown = 6.5;
-              boss.chargeDirection = null;
+              activeBoss.chargeState = 'idle';
+              activeBoss.chargeCooldown = 6.5;
+              activeBoss.chargeDirection = null;
             }
           }
         }
       }
 
-      if (currentStage === 2 && boss.level === 20 && boss.chargeState !== 'charge') {
-        boss.slamCooldown -= delta;
-        if (boss.slamCooldown <= 0) triggerRockStrike();
+      if (currentStage === 2 && activeBoss.level === 20 && activeBoss.chargeState !== 'charge') {
+        activeBoss.slamCooldown -= delta;
+        if (activeBoss.slamCooldown <= 0) triggerRockStrike(activeBoss);
       }
 
-      if (boss.chargeState !== 'prepare' && boss.chargeState !== 'charge') {
-        boss.cooldown -= delta;
-        if (boss.cooldown <= 0) {
-          boss.cooldown = boss.level === 20 ? 2.2 + Math.random() * 2.5 : 3 + Math.random() * 7;
-          fireBossMissiles();
+      if (activeBoss.chargeState !== 'prepare' && activeBoss.chargeState !== 'charge') {
+        activeBoss.cooldown -= delta;
+        if (activeBoss.cooldown <= 0) {
+          activeBoss.cooldown = activeBoss.level === 20 ? 2.2 + Math.random() * 2.5 : 3 + Math.random() * 7;
+          fireBossMissiles(activeBoss);
         }
       }
     }
@@ -1668,6 +1689,46 @@
           ctx.lineTo(7, 4);
           ctx.closePath();
           ctx.fill();
+        } else if (atk.style === 'iceBolt') {
+          const angle = Math.atan2(atk.vy, atk.vx);
+          ctx.rotate(angle);
+          const shimmer = 0.72 + Math.sin((atk.life || 0) * 16) * 0.18;
+          ctx.shadowColor = '#67e8f9';
+          ctx.shadowBlur = 16;
+          const trail = ctx.createLinearGradient(-28, 0, 12, 0);
+          trail.addColorStop(0, 'rgba(103, 232, 249, 0)');
+          trail.addColorStop(0.62, 'rgba(125, 211, 252, 0.35)');
+          trail.addColorStop(1, 'rgba(224, 242, 254, 0.85)');
+          ctx.fillStyle = trail;
+          ctx.beginPath();
+          ctx.moveTo(-28, 0);
+          ctx.lineTo(-5, -5);
+          ctx.lineTo(-5, 5);
+          ctx.closePath();
+          ctx.fill();
+          const crystal = ctx.createLinearGradient(-9, -10, 13, 10);
+          crystal.addColorStop(0, '#e0f2fe');
+          crystal.addColorStop(0.42, '#7dd3fc');
+          crystal.addColorStop(1, '#2563eb');
+          ctx.fillStyle = crystal;
+          ctx.beginPath();
+          ctx.moveTo(-10, -7);
+          ctx.lineTo(7, -9);
+          ctx.lineTo(16, 0);
+          ctx.lineTo(7, 9);
+          ctx.lineTo(-10, 7);
+          ctx.lineTo(-4, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = '#dff8ff';
+          ctx.globalAlpha = shimmer;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-7, -3);
+          ctx.lineTo(10, 0);
+          ctx.lineTo(-7, 3);
+          ctx.stroke();
         } else if (atk.damage) {
           ctx.fillStyle = atk.color;
           ctx.beginPath();
@@ -3061,12 +3122,14 @@
       currentStage = stage;
       resetGame();
       screen = 'game';
+      if (currentStage === 2) openChoices();
       syncBgm();
     }
 
     function restartCurrentStage() {
       resetGame();
       screen = 'game';
+      if (currentStage === 2) openChoices();
       syncBgm();
     }
 
