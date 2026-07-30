@@ -96,6 +96,11 @@
       spriteImages[name] = image;
     });
     const augmentIconImages = {};
+    const AUGMENT_ICON_CELLS = {
+      damage: [0, 0], maxHp: [1, 0], attackSpeed: [2, 0], area: [3, 0],
+      pickup: [0, 1], heal: [1, 1], pierce: [2, 1], extraShot: [3, 1],
+      shuriken: [0, 2], fireZone: [1, 2], shield: [2, 2],
+    };
 
     function makeChromaTransparent(image) {
       const processed = document.createElement('canvas');
@@ -113,6 +118,12 @@
       processedCtx.putImageData(pixels, 0, 0);
       return processed;
     }
+
+    const augmentSheetImage = new Image();
+    augmentSheetImage.onload = () => {
+      augmentIconImages.sheet = makeChromaTransparent(augmentSheetImage);
+    };
+    augmentSheetImage.src = 'assets/augment-icons-v2-chroma.png';
 
     const wingedShoeImage = new Image();
     wingedShoeImage.onload = () => {
@@ -1893,6 +1904,34 @@
       ctx.arc(-14, -18, 16, Math.PI * 1.12, Math.PI * 1.82);
       ctx.fill();
       ctx.lineWidth = 7;
+
+      const iconSheet = augmentIconImages.sheet;
+      const iconCell = AUGMENT_ICON_CELLS[augment.id];
+      if (iconSheet && iconCell) {
+        const cellWidth = iconSheet.width / 4;
+        const cellHeight = iconSheet.height / 3;
+        const inset = 6;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, 42, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(
+          iconSheet,
+          iconCell[0] * cellWidth + inset,
+          iconCell[1] * cellHeight + inset,
+          cellWidth - inset * 2,
+          cellHeight - inset * 2,
+          -47,
+          -47,
+          94,
+          94,
+        );
+        ctx.restore();
+        ctx.restore();
+        return;
+      }
 
       if (augment.id === 'maxHp' || augment.id === 'heal') {
         ctx.fillStyle = '#fb7185';
