@@ -1551,7 +1551,12 @@
       const visualX = player.x + (player.attackDirX || 0) * attackPulse * 5;
       const visualY = player.y + (player.attackDirY || 0) * attackPulse * 5;
       const lean = (player.attackDirX || 0) * attackPulse * 0.08;
+      const reviveBlinkAlpha = player.invulnerableTimer > 0
+        ? (Math.floor(performance.now() / 105) % 2 === 0 ? 1 : 0.18)
+        : 1;
 
+      ctx.save();
+      ctx.globalAlpha = reviveBlinkAlpha;
       if (!drawSprite('player', visualX, visualY, player.radius * 2.2, lean)) {
         ctx.save();
         ctx.translate(visualX - camera.x, visualY - camera.y);
@@ -1570,6 +1575,7 @@
         ctx.fill();
         ctx.restore();
       }
+      ctx.restore();
 
       const barY = player.y - camera.y + player.radius + 18;
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
