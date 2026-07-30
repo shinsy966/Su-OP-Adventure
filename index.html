@@ -96,13 +96,18 @@
       spriteImages[name] = image;
     });
     const augmentIconImages = {};
-    const wingedShoeImage = new Image();
-    wingedShoeImage.onload = () => {
+    const AUGMENT_ICON_CELLS = {
+      damage: [0, 0], maxHp: [1, 0], attackSpeed: [2, 0], area: [3, 0],
+      pickup: [0, 1], heal: [1, 1], pierce: [2, 1], extraShot: [3, 1],
+      shuriken: [0, 2], fireZone: [1, 2], shield: [2, 2],
+    };
+
+    function makeChromaTransparent(image) {
       const processed = document.createElement('canvas');
-      processed.width = 512;
-      processed.height = 512;
+      processed.width = image.naturalWidth || image.width;
+      processed.height = image.naturalHeight || image.height;
       const processedCtx = processed.getContext('2d');
-      processedCtx.drawImage(wingedShoeImage, 0, 0, processed.width, processed.height);
+      processedCtx.drawImage(image, 0, 0, processed.width, processed.height);
       const pixels = processedCtx.getImageData(0, 0, processed.width, processed.height);
       for (let i = 0; i < pixels.data.length; i += 4) {
         const red = pixels.data[i];
@@ -111,7 +116,18 @@
         if (green > 120 && green - Math.max(red, blue) > 70) pixels.data[i + 3] = 0;
       }
       processedCtx.putImageData(pixels, 0, 0);
-      augmentIconImages.speed = processed;
+      return processed;
+    }
+
+    const augmentSheetImage = new Image();
+    augmentSheetImage.onload = () => {
+      augmentIconImages.sheet = makeChromaTransparent(augmentSheetImage);
+    };
+    augmentSheetImage.src = 'assets/augment-icons-chroma.png';
+
+    const wingedShoeImage = new Image();
+    wingedShoeImage.onload = () => {
+      augmentIconImages.speed = makeChromaTransparent(wingedShoeImage);
     };
     wingedShoeImage.src = 'assets/augment-speed-boot-chroma.png';
 
@@ -591,7 +607,7 @@
           x: Math.random() * WORLD_WIDTH,
           y: Math.random() * WORLD_HEIGHT,
           radius: 12 + Math.random() * 8,
-          speed: 70 + Math.random() * 80,
+          speed: (70 + Math.random() * 80) * 0.9,
           hp: 14 + Math.random() * 8 + difficulty.enemyHpBonus,
           color: Math.random() < 0.5 ? '#3b82f6' : '#f59e0b',
           sprite,
@@ -722,7 +738,7 @@
         radius: 70,
         hp,
         maxHp: hp,
-        speed: 110,
+        speed: 99,
         damage: difficulty.bossContactDamage,
         projectileDamage: difficulty.bossProjectileDamage,
         cooldown: isChargeBoss ? 2.2 + Math.random() * 2.5 : 3 + Math.random() * 7,
@@ -818,8 +834,8 @@
     }
 
     function gainExp(amount) {
-      // 레벨 15~19 구간은 아이템 하나당 경험치를 20% 추가 지급한다.
-      if (player.level >= 15 && player.level < 20) amount *= 1.2;
+      // 기존 보너스에 더해 레벨 15~19 구간은 경험치를 10% 추가 지급한다.
+      if (player.level >= 15 && player.level < 20) amount *= 1.32;
       player.exp += amount;
       while (player.exp >= player.expToNext) {
         player.exp -= player.expToNext;
@@ -1362,9 +1378,9 @@
     function drawPlayer() {
       const attackProgress = Math.max(0, Math.min(1, (player.attackVisual || 0) / 0.18));
       const attackPulse = Math.sin(attackProgress * Math.PI);
-      const visualX = player.x + (player.attackDirX || 0) * attackPulse * 12;
-      const visualY = player.y + (player.attackDirY || 0) * attackPulse * 12;
-      const lean = (player.attackDirX || 0) * attackPulse * 0.16;
+      const visualX = player.x + (player.attackDirX || 0) * attackPulse * 5;
+      const visualY = player.y + (player.attackDirY || 0) * attackPulse * 5;
+      const lean = (player.attackDirX || 0) * attackPulse * 0.08;
 
       if (!drawSprite('player', visualX, visualY, player.radius * 2.2, lean)) {
         ctx.save();
@@ -1381,36 +1397,6 @@
         ctx.fillStyle = '#111';
         ctx.beginPath();
         ctx.arc(4, -4, 2.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      if (attackProgress > 0) {
-        const attackAngle = Math.atan2(player.attackDirY || -1, player.attackDirX || 0);
-        ctx.save();
-        ctx.translate(visualX - camera.x, visualY - camera.y);
-        ctx.rotate(attackAngle);
-        ctx.globalAlpha = attackPulse * 0.92;
-        ctx.lineCap = 'round';
-        ctx.shadowColor = '#22d3ee';
-        ctx.shadowBlur = 15;
-        ctx.strokeStyle = '#22d3ee';
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.arc(8, 0, 43 + attackPulse * 10, -0.78, 0.78);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = '#e0f2fe';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(8, 0, 43 + attackPulse * 10, -0.7, 0.7);
-        ctx.stroke();
-        ctx.fillStyle = '#67e8f9';
-        ctx.beginPath();
-        ctx.moveTo(54 + attackPulse * 8, 0);
-        ctx.lineTo(40, -6);
-        ctx.lineTo(40, 6);
-        ctx.closePath();
         ctx.fill();
         ctx.restore();
       }
@@ -1908,6 +1894,34 @@
       ctx.arc(0, 0, 42, 0, Math.PI * 2);
       ctx.fill();
       ctx.lineWidth = 7;
+
+      const iconSheet = augmentIconImages.sheet;
+      const iconCell = AUGMENT_ICON_CELLS[augment.id];
+      if (iconSheet && iconCell) {
+        const cellWidth = iconSheet.width / 4;
+        const cellHeight = iconSheet.height / 3;
+        const inset = 5;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, 42, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(
+          iconSheet,
+          iconCell[0] * cellWidth + inset,
+          iconCell[1] * cellHeight + inset,
+          cellWidth - inset * 2,
+          cellHeight - inset * 2,
+          -47,
+          -47,
+          94,
+          94,
+        );
+        ctx.restore();
+        ctx.restore();
+        return;
+      }
 
       if (augment.id === 'maxHp' || augment.id === 'heal') {
         ctx.fillStyle = '#fb7185';
@@ -2452,37 +2466,37 @@
       if (!gamePaused) return;
       if (MOBILE_LAYOUT) {
       ctx.fillStyle = 'rgba(3, 12, 25, 0.9)';
-      ctx.fillRect(34, 265, WIDTH - 68, 360);
+      ctx.fillRect(34, 265, WIDTH - 68, 430);
       ctx.strokeStyle = '#67e8f9';
       ctx.lineWidth = 2;
-      ctx.strokeRect(34, 265, WIDTH - 68, 360);
+      ctx.strokeRect(34, 265, WIDTH - 68, 430);
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 34px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('일시정지', WIDTH / 2, 332);
       ctx.fillStyle = '#bae6fd';
       ctx.font = '16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
-      drawButton(WIDTH - 96, 280, 60, 42, '닫기');
-      drawButton(78, 414, WIDTH - 156, 54, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
-      drawButton(78, 484, WIDTH - 156, 54, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
-      drawButton(78, 554, WIDTH - 156, 54, '메인으로');
+      drawButton(78, 394, WIDTH - 156, 54, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
+      drawButton(78, 464, WIDTH - 156, 54, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
+      drawButton(78, 534, WIDTH - 156, 54, '메인 화면으로');
+      drawButton(78, 604, WIDTH - 156, 54, '닫기');
       return;
       }
       ctx.fillStyle = 'rgba(3, 12, 25, 0.88)';
-      ctx.fillRect(170, 120, WIDTH - 340, 360);
+      ctx.fillRect(170, 120, WIDTH - 340, 400);
       ctx.strokeStyle = '#67e8f9';
       ctx.lineWidth = 2;
-      ctx.strokeRect(170, 120, WIDTH - 340, 360);
+      ctx.strokeRect(170, 120, WIDTH - 340, 400);
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 36px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('일시정지', WIDTH / 2, 190);
       ctx.fillStyle = '#bae6fd';
       ctx.font = '18px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
-      drawButton(610, 134, 64, 44, '닫기');
       drawButton(242, 290, 180, 58, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
       drawButton(438, 290, 180, 58, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
-      drawButton(340, 370, 180, 52, '나가기');
+      drawButton(340, 370, 180, 52, '메인 화면으로');
+      drawButton(340, 440, 180, 52, '닫기');
     }
 
     function drawMenuBackground() {
@@ -2940,28 +2954,26 @@
       }
       if (screen === 'game' && gamePaused) {
         if (MOBILE_LAYOUT) {
-        if (isInside(x, y, WIDTH - 96, 280, 60, 42)) {
-          toggleGamePause();
-          return;
-        }
-        if (isInside(x, y, 78, 414, WIDTH - 156, 54)) {
+        if (isInside(x, y, 78, 394, WIDTH - 156, 54)) {
           soundSettings.bgm = !soundSettings.bgm;
           syncBgm();
           playSfx('click');
           return;
         }
-        if (isInside(x, y, 78, 484, WIDTH - 156, 54)) {
+        if (isInside(x, y, 78, 464, WIDTH - 156, 54)) {
           soundSettings.sfx = !soundSettings.sfx;
           if (soundSettings.sfx) playSfx('click');
           return;
         }
-        if (isInside(x, y, 78, 554, WIDTH - 156, 54)) {
+        if (isInside(x, y, 78, 534, WIDTH - 156, 54)) {
           exitToMainMenu();
           return;
         }
-        } else if (isInside(x, y, 610, 134, 64, 44)) {
+        if (isInside(x, y, 78, 604, WIDTH - 156, 54)) {
           toggleGamePause();
           return;
+        }
+        return;
         }
         if (isInside(x, y, 242, 290, 180, 58)) {
           soundSettings.bgm = !soundSettings.bgm;
@@ -2973,6 +2985,7 @@
           if (soundSettings.sfx) playSfx('click');
         }
         if (isInside(x, y, 340, 370, 180, 52)) exitToMainMenu();
+        if (isInside(x, y, 340, 440, 180, 52)) toggleGamePause();
         return;
       }
       if (screen === 'game' && choiceOpen) {
