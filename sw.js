@@ -1,11 +1,10 @@
-const CACHE_NAME = 'su-op-adventure-v3';
+const CACHE_NAME = 'su-op-adventure-v4';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './assets/pwa-icon-192.png',
   './assets/pwa-icon-512.png',
-  './assets/background-spaceship-portrait.png',
   './assets/augment-winged-shoe.png',
   './assets/sprite-player.png',
   './assets/sprite-bat.png',

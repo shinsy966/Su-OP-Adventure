@@ -34,9 +34,7 @@
     }
     canvas {
       box-sizing: border-box;
-      width: min(100vw, calc(100dvh * 9 / 16));
       height: auto;
-      aspect-ratio: 9 / 16;
       border: 3px solid #8b5cf6;
       background: #130d1f;
       display: block;
@@ -45,8 +43,16 @@
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
+    html[data-layout="mobile"] canvas {
+      width: min(100vw, calc(100dvh * 9 / 16));
+      aspect-ratio: 9 / 16;
+    }
+    html[data-layout="desktop"] canvas {
+      width: min(calc(100vw - 16px), calc((100dvh - 16px) * 43 / 31));
+      aspect-ratio: 43 / 31;
+    }
     @media (max-width: 700px) {
-      canvas {
+      html[data-layout="mobile"] canvas {
         border: 0;
       }
     }
@@ -57,9 +63,12 @@
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    // 세로 전용 논리 해상도. 실제 캔버스는 기기 픽셀 비율만큼 크게 만들어 선명하게 그린다.
-    const WIDTH = 540;
-    const HEIGHT = 960;
+    const MOBILE_LAYOUT = window.matchMedia('(pointer: coarse)').matches
+      || (navigator.maxTouchPoints > 0 && window.innerWidth <= 900);
+    document.documentElement.dataset.layout = MOBILE_LAYOUT ? 'mobile' : 'desktop';
+    // 기기별 논리 해상도. 실제 캔버스는 기기 픽셀 비율만큼 크게 만들어 선명하게 그린다.
+    const WIDTH = MOBILE_LAYOUT ? 540 : 860;
+    const HEIGHT = MOBILE_LAYOUT ? 960 : 620;
     function configureCanvasResolution() {
       const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(WIDTH * pixelRatio);
@@ -105,8 +114,6 @@
       augmentIconImages.speed = processed;
     };
     wingedShoeImage.src = 'assets/augment-winged-shoe.png';
-    const gameBackgroundImage = new Image();
-    gameBackgroundImage.src = 'assets/background-spaceship-portrait.png';
 
     const keys = {};
     const touchMovement = {
@@ -428,8 +435,7 @@
     const PAUSE_BUTTON = { x: WIDTH - 58, y: 14, size: 40 };
 
     function usesTouchControls() {
-      return window.matchMedia('(pointer: coarse)').matches
-        || (navigator.maxTouchPoints > 0 && window.innerWidth <= 900);
+      return MOBILE_LAYOUT;
     }
 
     function clamp(value, min, max) {
@@ -1266,25 +1272,44 @@
     }
 
     function drawBackground() {
-      if (gameBackgroundImage.complete && gameBackgroundImage.naturalWidth) {
-        ctx.drawImage(gameBackgroundImage, 0, 0, WIDTH, HEIGHT);
-        // 캐릭터와 보석이 배경에 묻히지 않도록 아주 얇은 색막을 덮는다.
-        ctx.fillStyle = 'rgba(3, 24, 35, 0.13)';
-        ctx.fillRect(0, 0, WIDTH, HEIGHT);
-        return;
-      }
       const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-      grad.addColorStop(0, '#082438');
-      grad.addColorStop(1, '#071827');
+      grad.addColorStop(0, '#0d3a4d');
+      grad.addColorStop(1, '#092f41');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
+      const tileSize = 120;
+      const startX = Math.floor(camera.x / tileSize) * tileSize - tileSize;
+      const startY = Math.floor(camera.y / tileSize) * tileSize - tileSize;
+      const endX = camera.x + WIDTH + tileSize;
+      const endY = camera.y + HEIGHT + tileSize;
       ctx.save();
       ctx.translate(-camera.x, -camera.y);
-      for (let x = 0; x < WORLD_WIDTH; x += 120) {
-        for (let y = 0; y < WORLD_HEIGHT; y += 120) {
-          ctx.fillStyle = (x + y) % 240 === 0 ? '#123a50' : '#0d2c42';
-          ctx.fillRect(x + 3, y + 3, 54, 54);
+      for (let x = startX; x <= endX; x += tileSize) {
+        for (let y = startY; y <= endY; y += tileSize) {
+          const cellX = Math.floor(x / tileSize);
+          const cellY = Math.floor(y / tileSize);
+          const seed = Math.abs(Math.sin(cellX * 12.9898 + cellY * 78.233) * 43758.5453) % 1;
+          ctx.fillStyle = seed > 0.52 ? '#12485a' : '#103f52';
+          ctx.fillRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+          ctx.strokeStyle = 'rgba(5, 31, 45, 0.58)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+          ctx.fillStyle = 'rgba(137, 212, 218, 0.14)';
+          ctx.fillRect(x + 8, y + 8, tileSize - 16, 2);
+
+          if (seed > 0.78) {
+            ctx.fillStyle = 'rgba(5, 36, 48, 0.48)';
+            ctx.fillRect(x + 44, y + 39, 32, 42);
+            ctx.fillStyle = 'rgba(111, 188, 195, 0.28)';
+            for (let line = 0; line < 4; line++) ctx.fillRect(x + 50, y + 46 + line * 8, 20, 2);
+          } else if (seed < 0.12) {
+            ctx.strokeStyle = 'rgba(118, 203, 205, 0.26)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x + 60, y + 60, 19, 0, Math.PI * 2);
+            ctx.stroke();
+          }
         }
       }
       ctx.restore();
@@ -1690,15 +1715,15 @@
 
     function drawUI() {
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.font = 'bold 16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
+      ctx.font = `bold ${MOBILE_LAYOUT ? 16 : 20}px "IBM Plex Sans KR", "Malgun Gothic", sans-serif`;
       ctx.textAlign = 'left';
-      ctx.fillText(`점수: ${score}`, 24, 32);
-      ctx.fillText(`레벨: ${player.level}`, 24, 58);
+      ctx.fillText(`점수: ${score}`, 24, MOBILE_LAYOUT ? 32 : 32);
+      ctx.fillText(`레벨: ${player.level}`, 24, MOBILE_LAYOUT ? 58 : 58);
 
-      const barX = 138;
-      const barY = 20;
-      const barWidth = WIDTH - barX - 62;
-      const barHeight = 18;
+      const barX = MOBILE_LAYOUT ? 138 : WIDTH / 2 - 190;
+      const barY = MOBILE_LAYOUT ? 20 : 22;
+      const barWidth = MOBILE_LAYOUT ? WIDTH - barX - 62 : 380;
+      const barHeight = MOBILE_LAYOUT ? 18 : 24;
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
       ctx.fillRect(barX, barY, barWidth, barHeight);
       const filledWidth = choiceOpen ? barWidth : barWidth * (player.exp / player.expToNext);
@@ -2180,8 +2205,10 @@
 
     function drawChoiceOverlay() {
       if (!choiceOpen) return;
-      drawPortraitChoiceOverlay();
-      return;
+      if (MOBILE_LAYOUT) {
+        drawPortraitChoiceOverlay();
+        return;
+      }
       const overlayGradient = ctx.createLinearGradient(30, 90, WIDTH - 30, HEIGHT - 90);
       overlayGradient.addColorStop(0, 'rgba(4, 22, 39, 0.96)');
       overlayGradient.addColorStop(0.5, 'rgba(10, 45, 67, 0.96)');
@@ -2282,6 +2309,7 @@
     function drawOverlay() {
       if (!gameOver && !victory) return;
       if (victory && performance.now() < victoryOverlayAt) return;
+      if (MOBILE_LAYOUT) {
       const portraitMinutes = Math.floor(elapsed / 60);
       const portraitSeconds = Math.floor(elapsed % 60).toString().padStart(2, '0');
       ctx.fillStyle = gameOver ? 'rgba(0,0,0,0.82)' : 'rgba(5, 35, 35, 0.88)';
@@ -2307,6 +2335,7 @@
         drawButton(78, 554, WIDTH - 156, 58, '메인으로');
       }
       return;
+      }
       if (gameOver) {
         const minutes = Math.floor(elapsed / 60);
         const seconds = Math.floor(elapsed % 60).toString().padStart(2, '0');
@@ -2366,6 +2395,7 @@
 
     function drawPauseOverlay() {
       if (!gamePaused) return;
+      if (MOBILE_LAYOUT) {
       ctx.fillStyle = 'rgba(3, 12, 25, 0.9)';
       ctx.fillRect(34, 265, WIDTH - 68, 360);
       ctx.strokeStyle = '#67e8f9';
@@ -2382,6 +2412,7 @@
       drawButton(78, 484, WIDTH - 156, 54, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
       drawButton(78, 554, WIDTH - 156, 54, '메인으로');
       return;
+      }
       ctx.fillStyle = 'rgba(3, 12, 25, 0.88)';
       ctx.fillRect(170, 120, WIDTH - 340, 360);
       ctx.strokeStyle = '#67e8f9';
@@ -2421,6 +2452,7 @@
 
     function drawMainMenu() {
       drawMenuBackground();
+      if (MOBILE_LAYOUT) {
       const portraitButtonX = 54;
       const portraitButtonWidth = WIDTH - 108;
       ctx.textAlign = 'center';
@@ -2451,6 +2483,7 @@
       ctx.font = 'bold 17px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.fillText(`보유 토큰: ${profile.tokens}`, WIDTH / 2, 680);
       return;
+      }
       ctx.textAlign = 'left';
       ctx.fillStyle = '#f5f3ff';
       ctx.font = 'bold 56px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
@@ -2484,6 +2517,7 @@
 
     function drawUpgrades() {
       drawMenuBackground();
+      if (MOBILE_LAYOUT) {
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 34px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'center';
@@ -2523,6 +2557,7 @@
       });
       drawButton(150, 600, 240, 56, '메인으로');
       return;
+      }
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 34px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'left';
@@ -2584,6 +2619,7 @@
 
     function drawAchievements() {
       drawMenuBackground();
+      if (MOBILE_LAYOUT) {
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 34px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'center';
@@ -2624,6 +2660,7 @@
       ctx.restore();
       drawButton(150, 780, 240, 54, '메인으로');
       return;
+      }
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 34px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'left';
@@ -2825,24 +2862,29 @@
         return;
       }
       if (screen === 'game' && victory) {
+        if (MOBILE_LAYOUT) {
         if (isInside(x, y, 78, 480, WIDTH - 156, 58)) startGame();
         if (isInside(x, y, 78, 554, WIDTH - 156, 58)) exitToMainMenu();
         if (isInside(x, y, 78, 480, WIDTH - 156, 132)) return;
+        }
         if (isInside(x, y, 242, 370, 180, 62)) startGame();
         if (isInside(x, y, 438, 370, 180, 62)) exitToMainMenu();
         return;
       }
       if (screen === 'game' && gameOver) {
+        if (MOBILE_LAYOUT) {
         if (isInside(x, y, 78, 462, WIDTH - 156, 54)) reviveGame();
         if (isInside(x, y, 78, 532, WIDTH - 156, 54)) startGame();
         if (isInside(x, y, 78, 602, WIDTH - 156, 54)) exitToMainMenu();
         if (isInside(x, y, 78, 462, WIDTH - 156, 194)) return;
+        }
         if (isInside(x, y, 184, 370, 150, 62)) reviveGame();
         if (isInside(x, y, 355, 370, 150, 62)) startGame();
         if (isInside(x, y, 526, 370, 150, 62)) exitToMainMenu();
         return;
       }
       if (screen === 'game' && gamePaused) {
+        if (MOBILE_LAYOUT) {
         if (isInside(x, y, 78, 414, WIDTH - 156, 54)) {
           soundSettings.bgm = !soundSettings.bgm;
           syncBgm();
@@ -2858,6 +2900,7 @@
           exitToMainMenu();
           return;
         }
+        }
         if (isInside(x, y, 242, 290, 180, 58)) {
           soundSettings.bgm = !soundSettings.bgm;
           syncBgm();
@@ -2871,10 +2914,12 @@
         return;
       }
       if (screen === 'game' && choiceOpen) {
+        if (MOBILE_LAYOUT) {
         getPortraitChoiceCardLayout().forEach(({ choice, x: cardX, y: cardY, width: cardWidth, height: cardHeight }) => {
           if (isInside(x, y, cardX, cardY, cardWidth, cardHeight)) applyAugment(choice);
         });
         return;
+        }
         const cardWidth = 225;
         const cardHeight = 300;
         const cardY = 205;
@@ -2887,16 +2932,19 @@
         return;
       }
       if (screen === 'menu') {
+        if (MOBILE_LAYOUT) {
         if (isInside(x, y, 54, 382, WIDTH - 108, 68)) startGame();
         if (isInside(x, y, 54, 472, WIDTH - 108, 68)) screen = 'upgrades';
         if (isInside(x, y, 54, 562, WIDTH - 108, 68)) screen = 'achievements';
         if (isInside(x, y, 54, 382, WIDTH - 108, 248)) return;
+        }
         if (isInside(x, y, 520, 180, 260, 76)) startGame();
         if (isInside(x, y, 520, 280, 260, 76)) screen = 'upgrades';
         if (isInside(x, y, 520, 380, 260, 76)) screen = 'achievements';
         return;
       }
       if (screen === 'upgrades') {
+        if (MOBILE_LAYOUT) {
         if (isInside(x, y, 150, 600, 240, 56)) {
           screen = 'menu';
           return;
@@ -2909,6 +2957,7 @@
           }
         });
         if (portraitUpgradeHit) return;
+        }
         if (isInside(x, y, 530, 530, 160, 52)) {
           screen = 'menu';
           return;
@@ -2920,6 +2969,7 @@
         return;
       }
       if (screen === 'achievements') {
+        if (MOBILE_LAYOUT) {
         if (isInside(x, y, 150, 780, 240, 54)) {
           screen = 'menu';
           return;
@@ -2935,6 +2985,7 @@
           }
         });
         if (x >= 28 && x <= WIDTH - 42 && y >= 132 && y <= 740) return;
+        }
         if (isInside(x, y, 530, 550, 160, 48)) {
           screen = 'menu';
           return;
