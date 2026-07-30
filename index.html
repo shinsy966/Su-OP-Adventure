@@ -3275,7 +3275,7 @@
       saveProfile();
     }
 
-    function useUpgradeCircle(key) {
+    function useUpgradeCircle(key, clickedPip = null) {
       // A filled pip still advances this ability while the player has a token.
       // Once refunding starts, keep removing this ability's pips down to zero
       // even though each refund returns a token.
@@ -3286,6 +3286,10 @@
         refundingUpgradeKey = key;
         undoUpgrade(key);
         if (profile.upgrades[key] === 0) refundingUpgradeKey = null;
+      // Keep the first filled pip reversible. The player can still click the
+      // second empty pip to advance from level 1 to level 2.
+      } else if (profile.upgrades[key] === 1 && clickedPip === 0) {
+        undoUpgrade(key);
       } else if (profile.tokens > 0 && profile.upgrades[key] < MAX_UPGRADE_LEVEL) {
         buyUpgrade(key);
       }
@@ -3661,7 +3665,7 @@
           for (let pip = 0; pip < MAX_UPGRADE_LEVEL; pip++) {
             const pipX = 326 + pip * 36;
             if (Math.hypot(x - pipX, y - (rowY + 38)) <= 16) {
-              useUpgradeCircle(option.key);
+              useUpgradeCircle(option.key, pip);
               portraitUpgradeHit = true;
               return;
             }
@@ -3682,7 +3686,7 @@
           for (let pip = 0; pip < MAX_UPGRADE_LEVEL; pip++) {
             const pipX = 450 + pip * 37;
             if (Math.hypot(x - pipX, y - (rowY + 33)) <= 17) {
-              useUpgradeCircle(option.key);
+              useUpgradeCircle(option.key, pip);
               return;
             }
           }
