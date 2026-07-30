@@ -427,6 +427,11 @@
     let currentChoiceIndex = 0;
     const PAUSE_BUTTON = { x: WIDTH - 58, y: 14, size: 40 };
 
+    function usesTouchControls() {
+      return window.matchMedia('(pointer: coarse)').matches
+        || (navigator.maxTouchPoints > 0 && window.innerWidth <= 900);
+    }
+
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
     }
@@ -1731,7 +1736,7 @@
     }
 
     function drawTouchJoystick() {
-      if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)
+      if (!usesTouchControls()
         || screen !== 'game' || choiceOpen || gameOver || victory || gamePaused) return;
       const centerX = 98;
       const centerY = HEIGHT - 104;
@@ -1760,7 +1765,7 @@
     }
 
     function drawPauseControl() {
-      if (screen !== 'game' || choiceOpen || gameOver || victory) return;
+      if (!usesTouchControls() || screen !== 'game' || choiceOpen || gameOver || victory) return;
       const { x, y, size } = PAUSE_BUTTON;
       ctx.save();
       ctx.fillStyle = 'rgba(9, 18, 38, 0.86)';
@@ -2814,7 +2819,7 @@
 
     canvas.addEventListener('click', (event) => {
       const { x, y } = getCanvasPoint(event);
-      if (screen === 'game' && !choiceOpen && !gameOver && !victory
+      if (usesTouchControls() && screen === 'game' && !choiceOpen && !gameOver && !victory
         && isInside(x, y, PAUSE_BUTTON.x, PAUSE_BUTTON.y, PAUSE_BUTTON.size, PAUSE_BUTTON.size)) {
         toggleGamePause();
         return;
