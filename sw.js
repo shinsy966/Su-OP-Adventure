@@ -1,4 +1,4 @@
-const CACHE_NAME = 'su-op-adventure-v29';
+const CACHE_NAME = 'su-op-adventure-v30';
 const APP_SHELL = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const APP_SHELL = [
   './assets/augment-attack-speed-winged-gun-chroma.png',
   './assets/sprites-stage2-palette-chroma.png',
   './assets/sprites-stage2-normal-contrast-chroma.png',
+  './assets/sprites-stage2-normal-contrast-clean.png',
   './assets/sprites-stage2-dusk-chroma.png',
   './assets/background-snowfield-dusk.png',
   './assets/sprite-player.png',

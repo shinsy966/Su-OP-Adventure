@@ -88,9 +88,9 @@
       zombie: { file: 'sprite-slime-zombie.png', crop: [0.53, 0.23, 0.45, 0.55] },
       miniBoss1: { file: 'sprite-boss-golem.png', crop: [0.05, 0.05, 0.90, 0.90] },
       miniBoss2: { file: 'sprite-boss-dragon.png', crop: [0.01, 0.18, 0.98, 0.68] },
-      frostWolf: { file: 'sprites-stage2-normal-contrast-chroma.png', crop: [0.006, 0.006, 0.321, 0.486], chroma: true },
-      iceSpirit: { file: 'sprites-stage2-normal-contrast-chroma.png', crop: [0.339, 0.006, 0.321, 0.486], chroma: true },
-      iceKnight: { file: 'sprites-stage2-normal-contrast-chroma.png', crop: [0.673, 0.006, 0.321, 0.486], chroma: true },
+      frostWolf: { file: 'sprites-stage2-normal-contrast-clean.png', crop: [0.006, 0.006, 0.321, 0.486], chroma: true },
+      iceSpirit: { file: 'sprites-stage2-normal-contrast-clean.png', crop: [0.339, 0.006, 0.321, 0.486], chroma: true },
+      iceKnight: { file: 'sprites-stage2-normal-contrast-clean.png', crop: [0.673, 0.006, 0.321, 0.486], chroma: true },
       iceDragon: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.006, 0.506, 0.321, 0.486], chroma: true },
       iceGolem: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.339, 0.506, 0.321, 0.486], chroma: true },
     };
@@ -124,23 +124,32 @@
       if (removeWhiteEdgeFringe) {
         const width = processed.width;
         const height = processed.height;
-        const edgePixels = [];
-        for (let y = 1; y < height - 1; y++) {
-          for (let x = 1; x < width - 1; x++) {
-            const index = (y * width + x) * 4;
-            const red = pixels.data[index];
-            const green = pixels.data[index + 1];
-            const blue = pixels.data[index + 2];
-            const brightest = Math.max(red, green, blue);
-            const darkest = Math.min(red, green, blue);
-            // Generated sprites often leave pale gray/blue anti-alias pixels on
-            // the key-color border. Remove only those low-saturation edge pixels.
-            if (pixels.data[index + 3] === 0 || brightest < 150 || brightest - darkest > 68) continue;
-            const neighborIndexes = [index - 4, index + 4, index - width * 4, index + width * 4];
-            if (neighborIndexes.some((neighbor) => pixels.data[neighbor + 3] === 0)) edgePixels.push(index);
+        // The generated sheet has a several-pixel pale anti-alias halo. Peel
+        // it away in passes; a single pass only removes the outermost pixel.
+        for (let pass = 0; pass < 5; pass++) {
+          const edgePixels = [];
+          for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+              const index = (y * width + x) * 4;
+              const red = pixels.data[index];
+              const green = pixels.data[index + 1];
+              const blue = pixels.data[index + 2];
+              const brightest = Math.max(red, green, blue);
+              const darkest = Math.min(red, green, blue);
+              // Only exterior near-white / pale gray pixels are removed. The
+              // saturated cyan crystals, gold armor, and magenta spirit stay.
+              const isPaleEdge = brightest >= 120
+                && brightest - darkest <= 86
+                && blue - red <= 62
+                && green - red <= 62;
+              if (pixels.data[index + 3] === 0 || !isPaleEdge) continue;
+              const neighborIndexes = [index - 4, index + 4, index - width * 4, index + width * 4];
+              if (neighborIndexes.some((neighbor) => pixels.data[neighbor + 3] === 0)) edgePixels.push(index);
+            }
           }
+          if (edgePixels.length === 0) break;
+          edgePixels.forEach((index) => { pixels.data[index + 3] = 0; });
         }
-        edgePixels.forEach((index) => { pixels.data[index + 3] = 0; });
       }
       processedCtx.putImageData(pixels, 0, 0);
       return processed;
@@ -153,7 +162,7 @@
         spriteImages[name] = processed;
       });
     };
-    stage2NormalSpriteSheet.src = 'assets/sprites-stage2-normal-contrast-chroma.png';
+    stage2NormalSpriteSheet.src = 'assets/sprites-stage2-normal-contrast-clean.png';
 
     const stage2BossSpriteSheet = new Image();
     stage2BossSpriteSheet.onload = () => {
