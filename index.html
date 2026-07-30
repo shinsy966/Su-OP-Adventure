@@ -3274,6 +3274,16 @@
       saveProfile();
     }
 
+    function useUpgradeCircle(key) {
+      // A filled pip still advances this ability while the player has a token.
+      // Once tokens run out, the same control refunds the most recent level.
+      if (profile.tokens > 0 && profile.upgrades[key] < MAX_UPGRADE_LEVEL) {
+        buyUpgrade(key);
+      } else if (profile.tokens <= 0 && profile.upgrades[key] > 0) {
+        undoUpgrade(key);
+      }
+    }
+
     function openStageSelectOrStart() {
       if (profile.stage1Cleared) {
         screen = 'stageSelect';
@@ -3641,17 +3651,16 @@
         let portraitUpgradeHit = false;
         UPGRADE_OPTIONS.forEach((option, index) => {
           const rowY = 174 + index * 94;
-          const level = profile.upgrades[option.key];
           for (let pip = 0; pip < MAX_UPGRADE_LEVEL; pip++) {
             const pipX = 326 + pip * 36;
             if (Math.hypot(x - pipX, y - (rowY + 38)) <= 16) {
-              if (pip < level) undoUpgrade(option.key); else buyUpgrade(option.key);
+              useUpgradeCircle(option.key);
               portraitUpgradeHit = true;
               return;
             }
           }
           if (isInside(x, y, 28, rowY, WIDTH - 56, 76)) {
-            buyUpgrade(option.key);
+            useUpgradeCircle(option.key);
             portraitUpgradeHit = true;
           }
         });
@@ -3663,16 +3672,15 @@
         }
         UPGRADE_OPTIONS.forEach((option, index) => {
           const rowY = 170 + index * 85;
-          const level = profile.upgrades[option.key];
           for (let pip = 0; pip < MAX_UPGRADE_LEVEL; pip++) {
             const pipX = 450 + pip * 37;
             if (Math.hypot(x - pipX, y - (rowY + 33)) <= 17) {
-              if (pip < level) undoUpgrade(option.key); else buyUpgrade(option.key);
+              useUpgradeCircle(option.key);
               return;
             }
           }
           if (isInside(x, y, 170, rowY, 520, 66)) {
-            buyUpgrade(option.key);
+            useUpgradeCircle(option.key);
           }
         });
         return;
