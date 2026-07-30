@@ -131,7 +131,11 @@
             const red = pixels.data[index];
             const green = pixels.data[index + 1];
             const blue = pixels.data[index + 2];
-            if (pixels.data[index + 3] === 0 || red < 218 || green < 218 || blue < 218) continue;
+            const brightest = Math.max(red, green, blue);
+            const darkest = Math.min(red, green, blue);
+            // Generated sprites often leave pale gray/blue anti-alias pixels on
+            // the key-color border. Remove only those low-saturation edge pixels.
+            if (pixels.data[index + 3] === 0 || brightest < 150 || brightest - darkest > 68) continue;
             const neighborIndexes = [index - 4, index + 4, index - width * 4, index + width * 4];
             if (neighborIndexes.some((neighbor) => pixels.data[neighbor + 3] === 0)) edgePixels.push(index);
           }
