@@ -1165,6 +1165,9 @@
       const activeBoss = boss;
       if (!['idle', 'prepare', 'charge'].includes(activeBoss.chargeState)) activeBoss.chargeState = 'idle';
       if (!Number.isFinite(activeBoss.chargeTimer)) activeBoss.chargeTimer = 0;
+      if (activeBoss.isChargeBoss && !Number.isFinite(activeBoss.chargeCooldown)) activeBoss.chargeCooldown = 4.5;
+      if (!Number.isFinite(activeBoss.cooldown)) activeBoss.cooldown = 2.5;
+      if (!Number.isFinite(activeBoss.chargeCount)) activeBoss.chargeCount = 0;
       if (currentStage === 2 && activeBoss.level === 20 && !Number.isFinite(activeBoss.slamCooldown)) {
         activeBoss.slamCooldown = 7.5;
       }
@@ -3219,6 +3222,23 @@
       stopBgm();
     }
 
+    function recoverLevel20BossState(error) {
+      if (screen !== 'game' || !boss || boss.level !== 20) return false;
+      console.error('Recovered level 20 boss state', error);
+      boss.chargeState = 'idle';
+      boss.chargeCooldown = 4.5;
+      boss.chargeTimer = 0;
+      boss.chargeDirection = null;
+      boss.chargeHitPlayer = false;
+      boss.chargeCount = 0;
+      boss.cooldown = 2.5;
+      boss.slamCooldown = currentStage === 2 ? 7.5 : Infinity;
+      boss.slamPunchTimer = 0;
+      bossStrikeZones.length = 0;
+      rockImpacts.length = 0;
+      return true;
+    }
+
     function drawEmergencyGameOver() {
       const pixelRatio = canvas.width / WIDTH;
       ctx.save();
@@ -3295,6 +3315,11 @@
         update(delta);
         draw();
       } catch (error) {
+        if (recoverLevel20BossState(error)) {
+          draw();
+          requestAnimationFrame(gameLoop);
+          return;
+        }
         handleRuntimeError('loop', error);
         drawEmergencyGameOver();
       }
