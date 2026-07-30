@@ -491,6 +491,7 @@
     let screen = 'menu';
     let achievementScroll = 0;
     let runStats = { maxLevel: 1, enemies: 0, bosses: 0 };
+    let refundingUpgradeKey = null;
 
     function normalizeAchievementClaims() {
       let changed = false;
@@ -3276,11 +3277,17 @@
 
     function useUpgradeCircle(key) {
       // A filled pip still advances this ability while the player has a token.
-      // Once tokens run out, the same control refunds the most recent level.
-      if (profile.tokens > 0 && profile.upgrades[key] < MAX_UPGRADE_LEVEL) {
-        buyUpgrade(key);
-      } else if (profile.tokens <= 0 && profile.upgrades[key] > 0) {
+      // Once refunding starts, keep removing this ability's pips down to zero
+      // even though each refund returns a token.
+      if (refundingUpgradeKey === key && profile.upgrades[key] > 0) {
         undoUpgrade(key);
+        if (profile.upgrades[key] === 0) refundingUpgradeKey = null;
+      } else if (profile.tokens <= 0 && profile.upgrades[key] > 0) {
+        refundingUpgradeKey = key;
+        undoUpgrade(key);
+        if (profile.upgrades[key] === 0) refundingUpgradeKey = null;
+      } else if (profile.tokens > 0 && profile.upgrades[key] < MAX_UPGRADE_LEVEL) {
+        buyUpgrade(key);
       }
     }
 
