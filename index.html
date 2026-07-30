@@ -173,6 +173,8 @@
     }
     let gameOver = false;
     let victory = false;
+    // A last-resort guard: a rendering exception must never leave a blank canvas.
+    let runtimeError = null;
     let currentStage = 1;
     let lastTime = performance.now();
     let elapsed = 0;
@@ -566,6 +568,7 @@
 
     function resetGame() {
       clearTouchMovement();
+      runtimeError = null;
       gameOver = false;
       victory = false;
       elapsed = 0;
@@ -805,7 +808,7 @@
         { id: 'area', label: `확장 회로 (${player.areaRank}/5)`, detail: '흡수·화염·방어막 반경 +20%', apply: () => { player.areaRank += 1; player.areaMult *= 1.2; player.pickupRange *= 1.2; } },
         { id: 'pickup', label: `수집 본능 (${player.pickupRank}/5)`, detail: '아이템 흡수 반경 +100%', apply: () => { player.pickupRank += 1; player.pickupRange *= 2; } },
         { id: 'speed', label: `가벼운 몸놀림 (${player.speedRank}/5)`, detail: '이동 속도 +15%', apply: () => { player.speedRank += 1; player.speed *= 1.15; } },
-        { id: 'heal', label: '즉시 회복', detail: '최대 HP의 40% 회복', apply: () => { player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.4); } },
+        { id: 'heal', label: '즉시 회복', detail: '최대 HP의 60% 회복', apply: () => { player.hp = Math.min(player.maxHp, player.hp + player.maxHp * 0.6); } },
         { id: 'pierce', label: '투사체 관통', detail: '게임당 1회 · 적을 관통', apply: () => { player.pierce = true; } },
         { id: 'extraShot', label: `투사체 증가 (${player.extraShots}/3)`, detail: '공격할 때 총알 +1', apply: () => { player.extraShots += 1; } },
         { id: 'shuriken', label: `표창 공격 (${player.shurikenRank}/3)`, detail: '5초 회전 · 3초 재사용 대기', apply: () => { if (player.shurikenRank === 0) player.shurikenCycleStart = elapsed; player.shurikenRank += 1; } },
@@ -2144,7 +2147,9 @@
 
       const iconSheet = augmentIconImages.sheet;
       const iconCell = AUGMENT_ICON_CELLS[augment.id];
-      if (iconSheet && iconCell) {
+      // These three symbols are drawn directly.  Their source-sheet art has
+      // extra margins, which made it look off-centre or cut off in the round frame.
+      if (iconSheet && iconCell && !['damage', 'area', 'shuriken'].includes(augment.id)) {
         const cellWidth = iconSheet.width / 4;
         const cellHeight = iconSheet.height / 3;
         const inset = 8;
@@ -3070,6 +3075,7 @@
     }
 
     function reviveGame() {
+      runtimeError = null;
       player.hp = player.maxHp;
       player.invulnerableTimer = 2;
       gameOver = false;
@@ -3079,10 +3085,63 @@
     }
 
     function exitToMainMenu() {
+      runtimeError = null;
       gameOver = false;
       gamePaused = false;
       screen = 'menu';
       syncBgm();
+    }
+
+    // Keep a single bad visual effect from cancelling the rest of this frame.
+    // In particular, this guarantees that the game-over panel can still render.
+    function drawSafely(layerName, renderer) {
+      ctx.save();
+      try {
+        renderer();
+      } catch (error) {
+        console.error(`Render error in ${layerName}`, error);
+      } finally {
+        ctx.restore();
+      }
+    }
+
+    function handleRuntimeError(phase, error) {
+      console.error(`Game ${phase} error`, error);
+      runtimeError = { phase, error };
+      clearTouchMovement();
+      choiceOpen = false;
+      paused = false;
+      gamePaused = false;
+      victory = false;
+      gameOver = true;
+      stopBgm();
+    }
+
+    function drawEmergencyGameOver() {
+      const pixelRatio = canvas.width / WIDTH;
+      ctx.save();
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      ctx.fillStyle = '#061421';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.textAlign = 'center';
+      ctx.font = '800 48px Arial';
+      ctx.fillStyle = '#fda4af';
+      ctx.fillText('GAME OVER', WIDTH / 2, HEIGHT / 2 - 26);
+      ctx.font = '600 18px Arial';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText('오류로 게임을 종료했습니다. 재시작해 주세요.', WIDTH / 2, HEIGHT / 2 + 12);
+      if (MOBILE_LAYOUT) {
+        drawButton(78, 462, WIDTH - 156, 54, '부활');
+        drawButton(78, 532, WIDTH - 156, 54, '다시 시작');
+        drawButton(78, 602, WIDTH - 156, 54, '메인 화면으로');
+      } else {
+        drawButton(184, 370, 150, 62, '부활');
+        drawButton(355, 370, 150, 62, '다시 시작');
+        drawButton(526, 370, 150, 62, '메인 화면으로');
+      }
+      ctx.restore();
     }
 
     function draw() {
@@ -3098,31 +3157,41 @@
         drawAchievements();
         return;
       }
-      drawBackground();
-      drawBossStrikeWarnings();
-      drawFireZones();
-      drawPickups();
-      drawEnemies();
-      drawAttacks();
-      drawBoss();
-      drawBossExplosions();
-      drawShield();
-      drawPlayer();
-      drawShurikens();
-      drawUI();
-      drawTouchJoystick();
-      drawBossAlert();
-      drawChoiceOverlay();
-      drawOverlay();
-      drawPauseOverlay();
-      drawPauseControl();
+      drawSafely('background', drawBackground);
+      drawSafely('boss strike warnings', drawBossStrikeWarnings);
+      drawSafely('fire zones', drawFireZones);
+      drawSafely('pickups', drawPickups);
+      drawSafely('enemies', drawEnemies);
+      drawSafely('attacks', drawAttacks);
+      drawSafely('boss', drawBoss);
+      drawSafely('boss effects', drawBossExplosions);
+      drawSafely('shield', drawShield);
+      drawSafely('player', drawPlayer);
+      drawSafely('shurikens', drawShurikens);
+      drawSafely('UI', drawUI);
+      drawSafely('touch controls', drawTouchJoystick);
+      drawSafely('boss alert', drawBossAlert);
+      drawSafely('augment choices', drawChoiceOverlay);
+      drawSafely('game-over panel', drawOverlay);
+      drawSafely('pause panel', drawPauseOverlay);
+      drawSafely('pause control', drawPauseControl);
     }
 
     function gameLoop(now) {
       const delta = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
-      update(delta);
-      draw();
+      if (runtimeError) {
+        drawEmergencyGameOver();
+        requestAnimationFrame(gameLoop);
+        return;
+      }
+      try {
+        update(delta);
+        draw();
+      } catch (error) {
+        handleRuntimeError('loop', error);
+        drawEmergencyGameOver();
+      }
       requestAnimationFrame(gameLoop);
     }
 
