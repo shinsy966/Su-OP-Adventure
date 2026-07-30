@@ -108,7 +108,7 @@
       shuriken: [0, 2], fireZone: [1, 2], shield: [2, 2],
     };
 
-    function makeChromaTransparent(image) {
+    function makeChromaTransparent(image, removeWhiteEdgeFringe = false) {
       const processed = document.createElement('canvas');
       processed.width = image.naturalWidth || image.width;
       processed.height = image.naturalHeight || image.height;
@@ -121,13 +121,30 @@
         const blue = pixels.data[i + 2];
         if (green > 120 && green - Math.max(red, blue) > 70) pixels.data[i + 3] = 0;
       }
+      if (removeWhiteEdgeFringe) {
+        const width = processed.width;
+        const height = processed.height;
+        const edgePixels = [];
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            const index = (y * width + x) * 4;
+            const red = pixels.data[index];
+            const green = pixels.data[index + 1];
+            const blue = pixels.data[index + 2];
+            if (pixels.data[index + 3] === 0 || red < 218 || green < 218 || blue < 218) continue;
+            const neighborIndexes = [index - 4, index + 4, index - width * 4, index + width * 4];
+            if (neighborIndexes.some((neighbor) => pixels.data[neighbor + 3] === 0)) edgePixels.push(index);
+          }
+        }
+        edgePixels.forEach((index) => { pixels.data[index + 3] = 0; });
+      }
       processedCtx.putImageData(pixels, 0, 0);
       return processed;
     }
 
     const stage2NormalSpriteSheet = new Image();
     stage2NormalSpriteSheet.onload = () => {
-      const processed = makeChromaTransparent(stage2NormalSpriteSheet);
+      const processed = makeChromaTransparent(stage2NormalSpriteSheet, true);
       ['frostWolf', 'iceSpirit', 'iceKnight'].forEach((name) => {
         spriteImages[name] = processed;
       });
