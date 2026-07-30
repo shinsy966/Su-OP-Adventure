@@ -319,6 +319,9 @@
       level: 1,
       difficulty: 1,
       attackRange: 2100,
+      attackVisual: 0,
+      attackDirX: 0,
+      attackDirY: -1,
     };
 
     const PROFILE_KEY = 'suOpAdventureProfileV1';
@@ -541,6 +544,9 @@
       player.hpRank = 0;
       player.invulnerableTimer = 0;
       player.attackSpeedRank = 0;
+      player.attackVisual = 0;
+      player.attackDirX = 0;
+      player.attackDirY = -1;
       player.areaRank = 0;
       player.pickupRank = 0;
       player.speedRank = 0;
@@ -868,6 +874,10 @@
         dirY /= length;
       }
 
+      player.attackVisual = 0.18;
+      player.attackDirX = dirX;
+      player.attackDirY = dirY;
+
       const shots = 1 + (player.extraShots || 0);
       for (let i = 0; i < shots; i++) {
         const angleOffset = (i - (shots - 1) / 2) * 0.12;
@@ -1101,6 +1111,7 @@
 
       elapsed += delta;
       player.invulnerableTimer = Math.max(0, (player.invulnerableTimer || 0) - delta);
+      player.attackVisual = Math.max(0, (player.attackVisual || 0) - delta);
       bossAlertTimer = Math.max(0, bossAlertTimer - delta);
 
       const moveX = (keys['ArrowRight'] ? 1 : 0) - (keys['ArrowLeft'] ? 1 : 0) + (touchMovement.active ? touchMovement.x : 0);
@@ -1315,7 +1326,7 @@
       ctx.restore();
     }
 
-    function drawSprite(sprite, worldX, worldY, size) {
+    function drawSprite(sprite, worldX, worldY, size, rotation = 0) {
       const asset = SPRITE_ASSETS[sprite];
       const image = spriteImages[sprite];
       if (!asset || !image || !image.complete || !image.naturalWidth) return false;
@@ -1326,24 +1337,39 @@
       const sourceHeight = image.height * cropHeight;
       const drawWidth = size;
       const drawHeight = size * (sourceHeight / sourceWidth);
-      ctx.drawImage(
-        image,
-        sourceX,
-        sourceY,
-        sourceWidth,
-        sourceHeight,
-        worldX - camera.x - drawWidth / 2,
-        worldY - camera.y - drawHeight / 2,
-        drawWidth,
-        drawHeight,
-      );
+      if (rotation) {
+        ctx.save();
+        ctx.translate(worldX - camera.x, worldY - camera.y);
+        ctx.rotate(rotation);
+        ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+        ctx.restore();
+      } else {
+        ctx.drawImage(
+          image,
+          sourceX,
+          sourceY,
+          sourceWidth,
+          sourceHeight,
+          worldX - camera.x - drawWidth / 2,
+          worldY - camera.y - drawHeight / 2,
+          drawWidth,
+          drawHeight,
+        );
+      }
       return true;
     }
 
     function drawPlayer() {
-      if (!drawSprite('player', player.x, player.y, player.radius * 2.2)) {
+      const attackProgress = Math.max(0, Math.min(1, (player.attackVisual || 0) / 0.18));
+      const attackPulse = Math.sin(attackProgress * Math.PI);
+      const visualX = player.x + (player.attackDirX || 0) * attackPulse * 12;
+      const visualY = player.y + (player.attackDirY || 0) * attackPulse * 12;
+      const lean = (player.attackDirX || 0) * attackPulse * 0.16;
+
+      if (!drawSprite('player', visualX, visualY, player.radius * 2.2, lean)) {
         ctx.save();
-        ctx.translate(player.x - camera.x, player.y - camera.y);
+        ctx.translate(visualX - camera.x, visualY - camera.y);
+        ctx.rotate(lean);
         ctx.fillStyle = player.color;
         ctx.beginPath();
         ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
@@ -1355,6 +1381,36 @@
         ctx.fillStyle = '#111';
         ctx.beginPath();
         ctx.arc(4, -4, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (attackProgress > 0) {
+        const attackAngle = Math.atan2(player.attackDirY || -1, player.attackDirX || 0);
+        ctx.save();
+        ctx.translate(visualX - camera.x, visualY - camera.y);
+        ctx.rotate(attackAngle);
+        ctx.globalAlpha = attackPulse * 0.92;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#22d3ee';
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.arc(8, 0, 43 + attackPulse * 10, -0.78, 0.78);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(8, 0, 43 + attackPulse * 10, -0.7, 0.7);
+        ctx.stroke();
+        ctx.fillStyle = '#67e8f9';
+        ctx.beginPath();
+        ctx.moveTo(54 + attackPulse * 8, 0);
+        ctx.lineTo(40, -6);
+        ctx.lineTo(40, 6);
+        ctx.closePath();
         ctx.fill();
         ctx.restore();
       }
