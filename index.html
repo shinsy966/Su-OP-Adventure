@@ -88,11 +88,11 @@
       zombie: { file: 'sprite-slime-zombie.png', crop: [0.53, 0.23, 0.45, 0.55] },
       miniBoss1: { file: 'sprite-boss-golem.png', crop: [0.05, 0.05, 0.90, 0.90] },
       miniBoss2: { file: 'sprite-boss-dragon.png', crop: [0.01, 0.18, 0.98, 0.68] },
-      frostWolf: { file: 'sprites-stage2-palette-chroma.png', crop: [0.006, 0.006, 0.321, 0.486], chroma: true },
-      iceSpirit: { file: 'sprites-stage2-palette-chroma.png', crop: [0.339, 0.006, 0.321, 0.486], chroma: true },
-      iceKnight: { file: 'sprites-stage2-palette-chroma.png', crop: [0.673, 0.006, 0.321, 0.486], chroma: true },
-      iceDragon: { file: 'sprites-stage2-palette-chroma.png', crop: [0.006, 0.506, 0.321, 0.486], chroma: true },
-      iceGolem: { file: 'sprites-stage2-palette-chroma.png', crop: [0.339, 0.506, 0.321, 0.486], chroma: true },
+      frostWolf: { file: 'sprites-stage2-normal-contrast-chroma.png', crop: [0.006, 0.006, 0.321, 0.486], chroma: true },
+      iceSpirit: { file: 'sprites-stage2-normal-contrast-chroma.png', crop: [0.339, 0.006, 0.321, 0.486], chroma: true },
+      iceKnight: { file: 'sprites-stage2-normal-contrast-chroma.png', crop: [0.673, 0.006, 0.321, 0.486], chroma: true },
+      iceDragon: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.006, 0.506, 0.321, 0.486], chroma: true },
+      iceGolem: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.339, 0.506, 0.321, 0.486], chroma: true },
     };
     const spriteImages = {};
     Object.entries(SPRITE_ASSETS).forEach(([name, asset]) => {
@@ -125,14 +125,23 @@
       return processed;
     }
 
-    const stage2SpriteSheet = new Image();
-    stage2SpriteSheet.onload = () => {
-      const processed = makeChromaTransparent(stage2SpriteSheet);
-      ['frostWolf', 'iceSpirit', 'iceKnight', 'iceDragon', 'iceGolem'].forEach((name) => {
+    const stage2NormalSpriteSheet = new Image();
+    stage2NormalSpriteSheet.onload = () => {
+      const processed = makeChromaTransparent(stage2NormalSpriteSheet);
+      ['frostWolf', 'iceSpirit', 'iceKnight'].forEach((name) => {
         spriteImages[name] = processed;
       });
     };
-    stage2SpriteSheet.src = 'assets/sprites-stage2-palette-chroma.png';
+    stage2NormalSpriteSheet.src = 'assets/sprites-stage2-normal-contrast-chroma.png';
+
+    const stage2BossSpriteSheet = new Image();
+    stage2BossSpriteSheet.onload = () => {
+      const processed = makeChromaTransparent(stage2BossSpriteSheet);
+      ['iceDragon', 'iceGolem'].forEach((name) => {
+        spriteImages[name] = processed;
+      });
+    };
+    stage2BossSpriteSheet.src = 'assets/sprites-stage2-dusk-chroma.png';
 
     const snowBackgroundImage = new Image();
     snowBackgroundImage.src = 'assets/background-snowfield-dusk.png';
@@ -370,7 +379,7 @@
     const PROFILE_KEY = 'suOpAdventureProfileV1';
     const MAX_UPGRADE_LEVEL = 5;
     const ACHIEVEMENTS = [
-      ...[5, 7, 10, 15, 20].map((target) => ({ key: `level-${target}`, group: '레벨 달성', label: `레벨 ${target} 달성`, type: 'level', target, reward: 2 })),
+      ...[5, 7, 10, 15, 20].map((target) => ({ key: `level-${target}`, group: '레벨 달성', label: `레벨 ${target} 달성`, type: 'level', target, reward: 1 })),
       ...[500, 1000, 2000, 5000, 10000].map((target) => ({ key: `enemy-${target}`, group: '몬스터 처치', label: `몬스터 ${target.toLocaleString()}마리 처치`, type: 'enemies', target, reward: 1 })),
       ...[1, 3, 5, 7, 10].map((target) => ({ key: `boss-${target}`, group: '보스 처치', label: `보스 ${target.toLocaleString()}마리 처치`, type: 'bosses', target, reward: 2 })),
     ];
@@ -393,17 +402,32 @@
       try {
         const saved = JSON.parse(localStorage.getItem(PROFILE_KEY));
         if (!saved) return defaults;
+        const savedClaims = saved.claimed || {};
+        const savedClaimedRewards = saved.claimedRewards || {};
+        let legacyBossTokenCorrection = 0;
+        const normalizedClaimedRewards = { ...savedClaimedRewards };
+        Object.keys(savedClaims).forEach((key) => {
+          if (!savedClaims[key]) return;
+          const achievement = ACHIEVEMENTS.find((item) => item.key === key);
+          if (!achievement) return;
+          const received = Number(normalizedClaimedRewards[key]) || 1;
+          if (achievement.reward > received) {
+            legacyBossTokenCorrection += achievement.reward - received;
+            normalizedClaimedRewards[key] = achievement.reward;
+          }
+        });
         return {
-          tokens: Math.max(0, Number(saved.tokens) || 0),
+          tokens: Math.max(0, Number(saved.tokens) || 0) + legacyBossTokenCorrection,
           upgrades: {
             attack: clamp(Number(saved.upgrades?.attack) || 0, 0, MAX_UPGRADE_LEVEL),
             health: clamp(Number(saved.upgrades?.health) || 0, 0, MAX_UPGRADE_LEVEL),
             pickup: clamp(Number(saved.upgrades?.pickup) || 0, 0, MAX_UPGRADE_LEVEL),
             speed: clamp(Number(saved.upgrades?.speed) || 0, 0, MAX_UPGRADE_LEVEL),
           },
-          claimed: saved.claimed || {},
-          // 이전 저장 파일에서 이미 수령한 업적은 기존 보상 1개를 받은 것으로 처리한다.
-          claimedRewards: saved.claimedRewards || Object.fromEntries(Object.keys(saved.claimed || {}).map((key) => [key, 1])),
+          claimed: savedClaims,
+          // 이전 저장 파일의 보스 업적은 누락된 1토큰을 보정한다.
+          claimedRewards: normalizedClaimedRewards,
+          needsRewardMigration: legacyBossTokenCorrection > 0,
           stage1Cleared: Boolean(saved.stage1Cleared) || Number(saved.stats?.bosses) >= 2,
           stats: {
             maxLevel: Math.max(1, Number(saved.stats?.maxLevel) || 1),
@@ -423,11 +447,14 @@
 
     function saveProfile() {
       try {
+        delete profile.needsRewardMigration;
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
       } catch {
         // 브라우저 저장소를 사용할 수 없는 환경에서도 게임은 계속 진행한다.
       }
     }
+
+    if (profile.needsRewardMigration) saveProfile();
 
     function isAchievementUnlocked(achievement) {
       return profile.stats[achievement.type === 'level' ? 'maxLevel' : achievement.type] >= achievement.target;
@@ -2918,9 +2945,6 @@
       ctx.fillStyle = '#f5f3ff';
       ctx.font = `bold ${MOBILE_LAYOUT ? 40 : 48}px "IBM Plex Sans KR", "Malgun Gothic", sans-serif`;
       ctx.fillText('스테이지 선택', WIDTH / 2, MOBILE_LAYOUT ? 190 : 150);
-      ctx.fillStyle = '#c4b5fd';
-      ctx.font = `18px "IBM Plex Sans KR", "Malgun Gothic", sans-serif`;
-      ctx.fillText('시작할 스테이지를 선택하세요', WIDTH / 2, MOBILE_LAYOUT ? 228 : 190);
 
       if (MOBILE_LAYOUT) {
         drawButton(54, 286, WIDTH - 108, 72, '스테이지 1 · 연구 시설');
@@ -2929,8 +2953,11 @@
         return;
       }
 
-      drawButton(210, 280, 250, 82, '스테이지 1 · 연구 시설');
-      drawButton(500, 280, 250, 82, '스테이지 2 · 설원');
+      const stageButtonWidth = 260;
+      const stageButtonGap = 32;
+      const stageButtonStartX = (WIDTH - (stageButtonWidth * 2 + stageButtonGap)) / 2;
+      drawButton(stageButtonStartX, 280, stageButtonWidth, 82, '스테이지 1 · 연구 시설');
+      drawButton(stageButtonStartX + stageButtonWidth + stageButtonGap, 280, stageButtonWidth, 82, '스테이지 2 · 설원');
       drawButton(370, 430, 180, 56, '뒤로');
     }
 
@@ -2944,9 +2971,6 @@
       ctx.fillStyle = '#fef3c7';
       ctx.font = 'bold 18px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.fillText(`보유 토큰: ${profile.tokens}`, WIDTH / 2, 112);
-      ctx.fillStyle = '#c4b5fd';
-      ctx.font = '14px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
-      ctx.fillText('강화할 항목을 눌러 토큰 1개를 사용하세요.', WIDTH / 2, 142);
       UPGRADE_OPTIONS.forEach((option, index) => {
         const portraitY = 174 + index * 94;
         const level = profile.upgrades[option.key];
@@ -2984,10 +3008,6 @@
       ctx.fillStyle = '#fef3c7';
       ctx.font = 'bold 20px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.fillText(`보유 토큰: ${profile.tokens}`, 170, 116);
-      ctx.fillStyle = '#c4b5fd';
-      ctx.font = '15px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
-      ctx.fillText('강화할 능력 행을 클릭하세요 · 강화 1회당 토큰 1개 · 각 능력 최대 5단계', 170, 142);
-
       UPGRADE_OPTIONS.forEach((option, index) => {
         const y = 170 + index * 85;
         const level = profile.upgrades[option.key];
@@ -3149,6 +3169,13 @@
       if (profile.tokens <= 0 || profile.upgrades[key] >= MAX_UPGRADE_LEVEL) return;
       profile.tokens -= 1;
       profile.upgrades[key] += 1;
+      saveProfile();
+    }
+
+    function undoUpgrade(key) {
+      if (profile.upgrades[key] <= 0) return;
+      profile.upgrades[key] -= 1;
+      profile.tokens += 1;
       saveProfile();
     }
 
@@ -3499,8 +3526,8 @@
           if (isInside(x, y, 150, 530, 240, 56)) screen = 'menu';
           return;
         }
-        if (isInside(x, y, 210, 280, 250, 82)) startGame(1);
-        if (isInside(x, y, 500, 280, 250, 82)) startGame(2);
+        if (isInside(x, y, 204, 280, 260, 82)) startGame(1);
+        if (isInside(x, y, 496, 280, 260, 82)) startGame(2);
         if (isInside(x, y, 370, 430, 180, 56)) screen = 'menu';
         return;
       }
@@ -3512,7 +3539,17 @@
         }
         let portraitUpgradeHit = false;
         UPGRADE_OPTIONS.forEach((option, index) => {
-          if (isInside(x, y, 28, 174 + index * 94, WIDTH - 56, 76)) {
+          const rowY = 174 + index * 94;
+          const level = profile.upgrades[option.key];
+          for (let pip = 0; pip < MAX_UPGRADE_LEVEL; pip++) {
+            const pipX = 326 + pip * 36;
+            if (Math.hypot(x - pipX, y - (rowY + 38)) <= 16) {
+              if (pip < level) undoUpgrade(option.key); else buyUpgrade(option.key);
+              portraitUpgradeHit = true;
+              return;
+            }
+          }
+          if (isInside(x, y, 28, rowY, WIDTH - 56, 76)) {
             buyUpgrade(option.key);
             portraitUpgradeHit = true;
           }
@@ -3525,7 +3562,17 @@
         }
         UPGRADE_OPTIONS.forEach((option, index) => {
           const rowY = 170 + index * 85;
-          if (isInside(x, y, 170, rowY, 520, 66)) buyUpgrade(option.key);
+          const level = profile.upgrades[option.key];
+          for (let pip = 0; pip < MAX_UPGRADE_LEVEL; pip++) {
+            const pipX = 450 + pip * 37;
+            if (Math.hypot(x - pipX, y - (rowY + 33)) <= 17) {
+              if (pip < level) undoUpgrade(option.key); else buyUpgrade(option.key);
+              return;
+            }
+          }
+          if (isInside(x, y, 170, rowY, 520, 66)) {
+            buyUpgrade(option.key);
+          }
         });
         return;
       }
