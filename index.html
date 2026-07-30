@@ -149,6 +149,12 @@
     };
     wingedShoeImage.src = 'assets/augment-speed-boot-chroma.png';
 
+    const attackSpeedImage = new Image();
+    attackSpeedImage.onload = () => {
+      augmentIconImages.attackSpeed = makeChromaTransparent(attackSpeedImage);
+    };
+    attackSpeedImage.src = 'assets/augment-attack-speed-winged-gun-chroma.png';
+
     const keys = {};
     const touchMovement = {
       active: false,
@@ -2100,12 +2106,48 @@
       ctx.fill();
       ctx.lineWidth = 7;
 
+      if (augment.id === 'shield') {
+        ctx.save();
+        ctx.shadowColor = '#22d3ee';
+        ctx.shadowBlur = 13;
+        ctx.fillStyle = '#0b3654';
+        ctx.beginPath();
+        ctx.arc(0, 0, 29, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#67e8f9';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(0, 0, 29, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#d5f6ff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 19, 0.2, Math.PI * 1.85);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.20)';
+        ctx.beginPath();
+        ctx.arc(-10, -12, 8, Math.PI * 1.15, Math.PI * 1.8);
+        ctx.fill();
+        ctx.restore();
+        ctx.restore();
+        return;
+      }
+
+      if (augment.id === 'attackSpeed' && augmentIconImages.attackSpeed) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(augmentIconImages.attackSpeed, -40, -40, 80, 80);
+        ctx.restore();
+        return;
+      }
+
       const iconSheet = augmentIconImages.sheet;
       const iconCell = AUGMENT_ICON_CELLS[augment.id];
       if (iconSheet && iconCell) {
         const cellWidth = iconSheet.width / 4;
         const cellHeight = iconSheet.height / 3;
-        const inset = 6;
+        const inset = 8;
         ctx.save();
         ctx.beginPath();
         ctx.arc(0, 0, 42, 0, Math.PI * 2);
@@ -2118,10 +2160,10 @@
           iconCell[1] * cellHeight + inset,
           cellWidth - inset * 2,
           cellHeight - inset * 2,
-          -47,
-          -47,
-          94,
-          94,
+          -40,
+          -40,
+          80,
+          80,
         );
         ctx.restore();
         ctx.restore();
