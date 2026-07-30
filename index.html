@@ -466,6 +466,24 @@
     let achievementScroll = 0;
     let runStats = { maxLevel: 1, enemies: 0, bosses: 0 };
 
+    function normalizeAchievementClaims() {
+      let changed = false;
+      ACHIEVEMENTS.forEach((achievement) => {
+        if (profile.claimed?.[achievement.key]) {
+          if (profile.claimedRewards[achievement.key] !== achievement.reward) {
+            profile.claimedRewards[achievement.key] = achievement.reward;
+            changed = true;
+          }
+          return;
+        }
+        if (Number(profile.claimedRewards?.[achievement.key]) >= achievement.reward) {
+          profile.claimed[achievement.key] = true;
+          changed = true;
+        }
+      });
+      return changed;
+    }
+
     function saveProfile() {
       try {
         delete profile.needsRewardMigration;
@@ -475,7 +493,9 @@
       }
     }
 
-    if (profile.needsRewardMigration) saveProfile();
+    const profileNeedsRewardMigration = profile.needsRewardMigration;
+    const profileClaimsNormalized = normalizeAchievementClaims();
+    if (profileNeedsRewardMigration || profileClaimsNormalized) saveProfile();
 
     function isAchievementUnlocked(achievement) {
       return profile.stats[achievement.type === 'level' ? 'maxLevel' : achievement.type] >= achievement.target;
@@ -505,6 +525,16 @@
     function hasAvailableUpgrade() {
       return Math.floor(profile.tokens) >= 1
         && UPGRADE_OPTIONS.some((option) => profile.upgrades[option.key] < MAX_UPGRADE_LEVEL);
+    }
+
+    function claimAchievement(achievement) {
+      if (!isAchievementUnlocked(achievement) || isAchievementClaimed(achievement)) return;
+      const reward = achievement.reward - getClaimedReward(achievement);
+      profile.claimed[achievement.key] = true;
+      profile.claimedRewards[achievement.key] = achievement.reward;
+      profile.tokens += Math.max(0, reward);
+      normalizeAchievementClaims();
+      saveProfile();
     }
 
     function applyPermanentUpgrades() {
@@ -3615,13 +3645,7 @@
         }
         getAchievementLayout().forEach(({ achievement, y: portraitRowY }) => {
           if (!isInside(x, y, 28, portraitRowY - 24, WIDTH - 70, 38)) return;
-          if (isAchievementUnlocked(achievement) && !isAchievementClaimed(achievement)) {
-            profile.claimed[achievement.key] = true;
-            const reward = achievement.reward - getClaimedReward(achievement);
-            profile.claimedRewards[achievement.key] = achievement.reward;
-            profile.tokens += reward;
-            saveProfile();
-          }
+          claimAchievement(achievement);
         });
         if (x >= 28 && x <= WIDTH - 42 && y >= 132 && y <= 740) return;
         }
@@ -3631,13 +3655,7 @@
         }
         getAchievementLayout().forEach(({ achievement, y: rowY }) => {
           if (!isInside(x, y, 180, rowY - 20, 28, 28)) return;
-          if (isAchievementUnlocked(achievement) && !isAchievementClaimed(achievement)) {
-            profile.claimed[achievement.key] = true;
-            const reward = achievement.reward - getClaimedReward(achievement);
-            profile.claimedRewards[achievement.key] = achievement.reward;
-            profile.tokens += reward;
-            saveProfile();
-          }
+          claimAchievement(achievement);
         });
       }
     });
