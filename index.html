@@ -105,6 +105,8 @@
       augmentIconImages.speed = processed;
     };
     wingedShoeImage.src = 'assets/augment-winged-shoe.png';
+    const gameBackgroundImage = new Image();
+    gameBackgroundImage.src = 'assets/background-spaceship-portrait.png';
 
     const keys = {};
     const touchMovement = {
@@ -1259,6 +1261,13 @@
     }
 
     function drawBackground() {
+      if (gameBackgroundImage.complete && gameBackgroundImage.naturalWidth) {
+        ctx.drawImage(gameBackgroundImage, 0, 0, WIDTH, HEIGHT);
+        // 캐릭터와 보석이 배경에 묻히지 않도록 아주 얇은 색막을 덮는다.
+        ctx.fillStyle = 'rgba(3, 24, 35, 0.13)';
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        return;
+      }
       const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
       grad.addColorStop(0, '#082438');
       grad.addColorStop(1, '#071827');
