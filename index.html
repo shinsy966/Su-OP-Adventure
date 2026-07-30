@@ -215,18 +215,21 @@
     let bgmTimerId = null;
     let bgmIntervalMs = 0;
     let bgmStep = 0;
+    // Original synthwave battle loop: four contrasting 8-bar phrases instead
+    // of the old single-note loop. The D-minor palette keeps it adventurous,
+    // while the bridge briefly opens into a brighter lift before returning.
     const BGM_SECTIONS = [
-      [659, 784, 880, 784, 659, 587, 659, 523, 587, 659, 784, 659, 587, 523, 494, 523, 659, 784, 988, 880, 784, 659, 587, 659, 698, 784, 880, 784, 698, 587, 523, 587],
-      [523, 622, 740, 830, 740, 622, 523, 466, 554, 622, 740, 830, 932, 830, 740, 622, 466, 554, 659, 740, 659, 554, 466, 415, 554, 659, 830, 932, 830, 740, 622, 523],
-      [440, 523, 659, 784, 659, 523, 440, 494, 587, 698, 880, 784, 698, 587, 494, 440, 523, 659, 784, 1047, 988, 784, 659, 523, 494, 587, 740, 880, 740, 587, 494, 440],
-      [587, 698, 784, 932, 784, 698, 587, 523, 659, 784, 880, 1047, 880, 784, 659, 587, 523, 622, 740, 880, 740, 622, 523, 466, 587, 698, 880, 988, 880, 698, 587, 0],
+      [587, 698, 880, 698, 783, 698, 659, 587, 698, 783, 880, 1047, 880, 783, 698, 659, 587, 698, 783, 880, 1175, 1047, 880, 783, 698, 783, 880, 1047, 880, 783, 698, 0],
+      [523, 659, 783, 659, 698, 659, 587, 523, 659, 698, 783, 932, 783, 698, 659, 587, 523, 659, 783, 932, 1047, 932, 783, 698, 659, 783, 880, 783, 698, 659, 587, 0],
+      [440, 554, 659, 783, 880, 783, 659, 554, 494, 587, 698, 880, 988, 880, 698, 587, 554, 659, 783, 988, 1175, 988, 783, 698, 659, 783, 880, 1047, 880, 783, 698, 0],
+      [587, 698, 880, 1047, 1175, 1047, 880, 783, 698, 783, 932, 1175, 1047, 932, 783, 698, 659, 783, 880, 1047, 1319, 1175, 1047, 880, 783, 880, 1047, 1175, 1047, 880, 783, 0],
     ];
-    const BGM_ROOTS = [110, 98, 87, 98, 82, 98, 92, 110, 98, 87, 110, 82, 92, 110, 98, 87];
+    const BGM_ROOTS = [73.42, 87.31, 98, 82.41, 73.42, 87.31, 110, 98, 65.41, 82.41, 98, 87.31, 73.42, 87.31, 110, 98];
     const BGM_CHORDS = [
-      [130.81, 164.81, 196, 246.94], [98, 123.47, 146.83, 196], [110, 130.81, 164.81, 220], [87.31, 110, 130.81, 174.61],
-      [82.41, 103.83, 123.47, 164.81], [98, 123.47, 146.83, 185], [92.5, 110, 138.59, 185], [110, 138.59, 164.81, 220],
-      [98, 123.47, 146.83, 196], [87.31, 110, 130.81, 164.81], [110, 130.81, 164.81, 196], [82.41, 103.83, 123.47, 164.81],
-      [92.5, 116.54, 138.59, 185], [110, 138.59, 164.81, 220], [98, 123.47, 146.83, 185], [87.31, 110, 130.81, 174.61],
+      [146.83, 174.61, 220], [174.61, 220, 261.63], [196, 246.94, 293.66], [164.81, 196, 246.94],
+      [146.83, 174.61, 220], [174.61, 220, 261.63], [220, 261.63, 329.63], [196, 246.94, 293.66],
+      [130.81, 164.81, 196], [164.81, 207.65, 246.94], [196, 246.94, 293.66], [174.61, 220, 261.63],
+      [146.83, 174.61, 220], [174.61, 220, 261.63], [220, 261.63, 329.63], [196, 246.94, 293.66],
     ];
 
     function ensureAudio() {
@@ -336,21 +339,35 @@
       const step = bgmStep % sectionLength;
       const note = BGM_SECTIONS[sectionIndex][step];
       const bossFight = Boolean(boss);
-      const leadTypes = ['square', 'sawtooth', 'triangle', 'square'];
-      createTone(note, 0.105, 0.026, leadTypes[sectionIndex]);
-      if (step % 2 === 0) createTone(note * 1.25, 0.11, 0.01, 'sine');
-      if (step % 4 === 1) createTone(note * 2, 0.055, 0.009, 'sine');
-      if (step % 8 === 0) {
-        const chordIndex = (sectionIndex * 4 + Math.floor(step / 8)) % BGM_CHORDS.length;
-        const chord = BGM_CHORDS[chordIndex];
-        chord.forEach((tone, index) => createTone(tone * 2, 0.62, 0.007 + index * 0.002, index % 2 ? 'triangle' : 'sine'));
+      const phraseStep = Math.floor(step / 8);
+      const chordIndex = (sectionIndex * 4 + phraseStep) % BGM_CHORDS.length;
+      const chord = BGM_CHORDS[chordIndex];
+      const bass = BGM_ROOTS[chordIndex];
+      const leadTypes = ['sawtooth', 'square', 'triangle', 'sawtooth'];
+
+      // Lead melody, answering harmony and a constantly moving arpeggio.
+      createTone(note, 0.095, bossFight ? 0.032 : 0.026, leadTypes[sectionIndex]);
+      if (note && step % 4 === 2) createTone(note * 0.75, 0.072, 0.011, 'triangle');
+      if (step % 2 === 0) createTone(chord[(step / 2) % chord.length] * 2, 0.07, 0.009, 'sine');
+      if (step % 4 === 3 && note) createTone(note * 2, 0.052, 0.008, 'triangle');
+
+      // Driving kick/bass pattern with an off-beat snare and bright hats.
+      if (step % 4 === 0) {
+        createKick(bossFight ? 0.055 : 0.045);
+        createTone(bass, 0.24, bossFight ? 0.045 : 0.034, 'triangle');
+        chord.forEach((tone, index) => createTone(tone, 0.42, 0.006 + index * 0.002, index === 1 ? 'triangle' : 'sine'));
+      } else if (step % 4 === 2) {
+        createNoiseBurst(0.075, bossFight ? 0.025 : 0.018);
+        createTone(bass * 1.5, 0.12, 0.018, 'square');
+      } else {
+        createNoiseBurst(0.018, 0.0045);
       }
-      if (step % 8 === 4) createNoiseBurst(0.055, 0.008);
-      if (step % 2 === 1) createNoiseBurst(0.018, 0.004);
-      if (step % 4 === 3) createTone(note * 1.5, 0.075, 0.009, sectionIndex % 2 ? 'sine' : 'triangle');
+      if (step === 0 || step === 16) {
+        createTone(chord[0] * 2, 0.52, 0.016, 'sine');
+      }
       if (bossFight) {
-        createTone(note * 1.5, 0.085, 0.013, 'sawtooth');
-        if (step % 4 === 1) createTone(1560, 0.02, 0.008, 'square');
+        if (note) createTone(note * 1.5, 0.08, 0.014, 'sawtooth');
+        if (step % 4 === 1) createTone(1560, 0.025, 0.01, 'square');
       }
       bgmStep += 1;
     }
@@ -364,7 +381,7 @@
     function syncBgm() {
       if (soundSettings.bgm && screen === 'game') {
         ensureAudio();
-        const interval = boss ? 115 : 135;
+        const interval = boss ? 104 : 122;
         if (bgmTimerId && bgmIntervalMs !== interval) {
           window.clearInterval(bgmTimerId);
           bgmTimerId = null;
@@ -3251,6 +3268,7 @@
     function startGame(stage = 1) {
       currentStage = stage;
       resetGame();
+      bgmStep = 0;
       screen = 'game';
       if (currentStage === 2) openChoices();
       syncBgm();
@@ -3258,6 +3276,7 @@
 
     function restartCurrentStage() {
       resetGame();
+      bgmStep = 0;
       screen = 'game';
       if (currentStage === 2) openChoices();
       syncBgm();
