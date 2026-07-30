@@ -2430,10 +2430,10 @@
       if (!gamePaused) return;
       if (MOBILE_LAYOUT) {
       ctx.fillStyle = 'rgba(3, 12, 25, 0.9)';
-      ctx.fillRect(34, 265, WIDTH - 68, 430);
+      ctx.fillRect(34, 265, WIDTH - 68, 360);
       ctx.strokeStyle = '#67e8f9';
       ctx.lineWidth = 2;
-      ctx.strokeRect(34, 265, WIDTH - 68, 430);
+      ctx.strokeRect(34, 265, WIDTH - 68, 360);
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 34px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'center';
@@ -2442,15 +2442,15 @@
       ctx.font = '16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       drawButton(78, 394, WIDTH - 156, 54, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
       drawButton(78, 464, WIDTH - 156, 54, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
-      drawButton(78, 534, WIDTH - 156, 54, '메인 화면으로');
-      drawButton(78, 604, WIDTH - 156, 54, '닫기');
+      drawButton(78, 534, 184, 54, '메인 화면으로');
+      drawButton(278, 534, 184, 54, '닫기');
       return;
       }
       ctx.fillStyle = 'rgba(3, 12, 25, 0.88)';
-      ctx.fillRect(170, 120, WIDTH - 340, 400);
+      ctx.fillRect(170, 120, WIDTH - 340, 360);
       ctx.strokeStyle = '#67e8f9';
       ctx.lineWidth = 2;
-      ctx.strokeRect(170, 120, WIDTH - 340, 400);
+      ctx.strokeRect(170, 120, WIDTH - 340, 360);
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 36px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'center';
@@ -2459,8 +2459,8 @@
       ctx.font = '18px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       drawButton(242, 290, 180, 58, `BGM: ${soundSettings.bgm ? '켜짐' : '꺼짐'}`);
       drawButton(438, 290, 180, 58, `효과음: ${soundSettings.sfx ? '켜짐' : '꺼짐'}`);
-      drawButton(340, 370, 180, 52, '메인 화면으로');
-      drawButton(340, 440, 180, 52, '닫기');
+      drawButton(242, 370, 180, 52, '메인 화면으로');
+      drawButton(438, 370, 180, 52, '닫기');
     }
 
     function drawMenuBackground() {
@@ -2929,11 +2929,11 @@
           if (soundSettings.sfx) playSfx('click');
           return;
         }
-        if (isInside(x, y, 78, 534, WIDTH - 156, 54)) {
+        if (isInside(x, y, 78, 534, 184, 54)) {
           exitToMainMenu();
           return;
         }
-        if (isInside(x, y, 78, 604, WIDTH - 156, 54)) {
+        if (isInside(x, y, 278, 534, 184, 54)) {
           toggleGamePause();
           return;
         }
@@ -2948,8 +2948,8 @@
           soundSettings.sfx = !soundSettings.sfx;
           if (soundSettings.sfx) playSfx('click');
         }
-        if (isInside(x, y, 340, 370, 180, 52)) exitToMainMenu();
-        if (isInside(x, y, 340, 440, 180, 52)) toggleGamePause();
+        if (isInside(x, y, 242, 370, 180, 52)) exitToMainMenu();
+        if (isInside(x, y, 438, 370, 180, 52)) toggleGamePause();
         return;
       }
       if (screen === 'game' && choiceOpen) {
