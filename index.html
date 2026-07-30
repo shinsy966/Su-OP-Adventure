@@ -88,11 +88,11 @@
       zombie: { file: 'sprite-slime-zombie.png', crop: [0.53, 0.23, 0.45, 0.55] },
       miniBoss1: { file: 'sprite-boss-golem.png', crop: [0.05, 0.05, 0.90, 0.90] },
       miniBoss2: { file: 'sprite-boss-dragon.png', crop: [0.01, 0.18, 0.98, 0.68] },
-      frostWolf: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.006, 0.006, 0.321, 0.486], chroma: true },
-      iceSpirit: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.339, 0.006, 0.321, 0.486], chroma: true },
-      iceKnight: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.673, 0.006, 0.321, 0.486], chroma: true },
-      iceDragon: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.006, 0.506, 0.321, 0.486], chroma: true },
-      iceGolem: { file: 'sprites-stage2-dusk-chroma.png', crop: [0.339, 0.506, 0.321, 0.486], chroma: true },
+      frostWolf: { file: 'sprites-stage2-palette-chroma.png', crop: [0.006, 0.006, 0.321, 0.486], chroma: true },
+      iceSpirit: { file: 'sprites-stage2-palette-chroma.png', crop: [0.339, 0.006, 0.321, 0.486], chroma: true },
+      iceKnight: { file: 'sprites-stage2-palette-chroma.png', crop: [0.673, 0.006, 0.321, 0.486], chroma: true },
+      iceDragon: { file: 'sprites-stage2-palette-chroma.png', crop: [0.006, 0.506, 0.321, 0.486], chroma: true },
+      iceGolem: { file: 'sprites-stage2-palette-chroma.png', crop: [0.339, 0.506, 0.321, 0.486], chroma: true },
     };
     const spriteImages = {};
     Object.entries(SPRITE_ASSETS).forEach(([name, asset]) => {
@@ -132,7 +132,7 @@
         spriteImages[name] = processed;
       });
     };
-    stage2SpriteSheet.src = 'assets/sprites-stage2-dusk-chroma.png';
+    stage2SpriteSheet.src = 'assets/sprites-stage2-palette-chroma.png';
 
     const snowBackgroundImage = new Image();
     snowBackgroundImage.src = 'assets/background-snowfield-dusk.png';
