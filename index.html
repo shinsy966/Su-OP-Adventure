@@ -666,7 +666,7 @@
     }
 
     function damagePlayer(amount) {
-      if (player.invulnerableTimer > 0) return;
+      if (player.invulnerableTimer > 0 || player.augmentInvulnerableTimer > 0) return;
       player.hp -= amount * (1 - getShieldDamageReduction());
     }
 
@@ -717,6 +717,7 @@
       player.damageRank = 0;
       player.hpRank = 0;
       player.invulnerableTimer = 0;
+      player.augmentInvulnerableTimer = 0;
       player.attackSpeedRank = 0;
       player.attackVisual = 0;
       player.attackDirX = 0;
@@ -996,6 +997,9 @@
       if (!augment) return;
       augment.apply();
       if (augment.id === 'pierce') player.hasPierceAugment = true;
+      // Short protection while the overlay closes; intentionally no visual
+      // effect so it does not overlap with the revive blink feedback.
+      player.augmentInvulnerableTimer = 0.5;
       choiceOpen = false;
       paused = false;
       choices = [];
@@ -1396,6 +1400,7 @@
 
       elapsed += delta;
       player.invulnerableTimer = Math.max(0, (player.invulnerableTimer || 0) - delta);
+      player.augmentInvulnerableTimer = Math.max(0, (player.augmentInvulnerableTimer || 0) - delta);
       player.attackVisual = Math.max(0, (player.attackVisual || 0) - delta);
       bossAlertTimer = Math.max(0, bossAlertTimer - delta);
 
