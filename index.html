@@ -441,6 +441,7 @@
       const defaults = {
         tokens: 0,
         upgrades: { attack: 0, health: 0, pickup: 0, speed: 0 },
+        upgradeCycleDirections: {},
         claimed: {},
         claimedRewards: {},
         stage1Cleared: false,
@@ -471,6 +472,12 @@
             pickup: clamp(Number(saved.upgrades?.pickup) || 0, 0, MAX_UPGRADE_LEVEL),
             speed: clamp(Number(saved.upgrades?.speed) || 0, 0, MAX_UPGRADE_LEVEL),
           },
+          upgradeCycleDirections: Object.fromEntries(
+            ['attack', 'health', 'pickup', 'speed'].map((key) => [
+              key,
+              saved.upgradeCycleDirections?.[key] === 'down' ? 'down' : 'up',
+            ])
+          ),
           claimed: savedClaims,
           // 이전 저장 파일의 보스 업적은 누락된 1토큰을 보정한다.
           claimedRewards: normalizedClaimedRewards,
@@ -491,7 +498,6 @@
     let screen = 'menu';
     let achievementScroll = 0;
     let runStats = { maxLevel: 1, enemies: 0, bosses: 0 };
-    let refundingUpgradeKey = null;
 
     function normalizeAchievementClaims() {
       let changed = false;
@@ -3261,38 +3267,36 @@
       drawButton(530, 550, 160, 48, '메인으로');
     }
 
-    function buyUpgrade(key) {
-      if (profile.tokens <= 0 || profile.upgrades[key] >= MAX_UPGRADE_LEVEL) return;
-      profile.tokens -= 1;
-      profile.upgrades[key] += 1;
-      saveProfile();
+    function getUpgradeCycleDirection(key) {
+      const level = profile.upgrades[key];
+      if (level <= 0) return 'up';
+      if (level >= MAX_UPGRADE_LEVEL) return 'down';
+      return profile.upgradeCycleDirections[key] === 'down' ? 'down' : 'up';
     }
 
-    function undoUpgrade(key) {
-      if (profile.upgrades[key] <= 0) return;
-      profile.upgrades[key] -= 1;
-      profile.tokens += 1;
-      saveProfile();
-    }
-
-    function useUpgradeCircle(key, clickedPip = null) {
-      // A filled pip still advances this ability while the player has a token.
-      // Once refunding starts, keep removing this ability's pips down to zero
-      // even though each refund returns a token.
-      if (refundingUpgradeKey === key && profile.upgrades[key] > 0) {
-        undoUpgrade(key);
-        if (profile.upgrades[key] === 0) refundingUpgradeKey = null;
-      } else if (profile.tokens <= 0 && profile.upgrades[key] > 0) {
-        refundingUpgradeKey = key;
-        undoUpgrade(key);
-        if (profile.upgrades[key] === 0) refundingUpgradeKey = null;
-      // Keep the first filled pip reversible. The player can still click the
-      // second empty pip to advance from level 1 to level 2.
-      } else if (profile.upgrades[key] === 1 && clickedPip === 0) {
-        undoUpgrade(key);
-      } else if (profile.tokens > 0 && profile.upgrades[key] < MAX_UPGRADE_LEVEL) {
-        buyUpgrade(key);
+    function useUpgradeCircle(key) {
+      const level = profile.upgrades[key];
+      const direction = getUpgradeCycleDirection(key);
+      if (direction === 'down' && level > 0) {
+        profile.upgrades[key] -= 1;
+        profile.tokens += 1;
+        profile.upgradeCycleDirections[key] = profile.upgrades[key] === 0 ? 'up' : 'down';
+        saveProfile();
+        return;
       }
+      if (profile.tokens <= 0) {
+        if (level <= 0) return;
+        profile.upgrades[key] -= 1;
+        profile.tokens += 1;
+        profile.upgradeCycleDirections[key] = profile.upgrades[key] === 0 ? 'up' : 'down';
+        saveProfile();
+        return;
+      }
+      if (level >= MAX_UPGRADE_LEVEL) return;
+      profile.upgrades[key] += 1;
+      profile.tokens -= 1;
+      profile.upgradeCycleDirections[key] = profile.upgrades[key] === MAX_UPGRADE_LEVEL ? 'down' : 'up';
+      saveProfile();
     }
 
     function openStageSelectOrStart() {
@@ -3665,7 +3669,7 @@
           for (let pip = 0; pip < MAX_UPGRADE_LEVEL; pip++) {
             const pipX = 326 + pip * 36;
             if (Math.hypot(x - pipX, y - (rowY + 38)) <= 16) {
-              useUpgradeCircle(option.key, pip);
+              useUpgradeCircle(option.key);
               portraitUpgradeHit = true;
               return;
             }
@@ -3686,7 +3690,7 @@
           for (let pip = 0; pip < MAX_UPGRADE_LEVEL; pip++) {
             const pipX = 450 + pip * 37;
             if (Math.hypot(x - pipX, y - (rowY + 33)) <= 17) {
-              useUpgradeCircle(option.key, pip);
+              useUpgradeCircle(option.key);
               return;
             }
           }
