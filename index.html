@@ -332,8 +332,27 @@
       } else if (kind === 'gameOver') {
         [440, 349, 262, 196].forEach((note, index) => createTone(note, 0.3, 0.055, 'sawtooth', audio.currentTime + index * 0.16));
       } else if (kind === 'missionComplete') {
-        [523, 659, 784, 1047, 1319].forEach((note, index) => createTone(note, 0.32, 0.055, 'triangle', audio.currentTime + index * 0.12));
-        createTone(262, 0.75, 0.042, 'sine', audio.currentTime);
+        // A compact original victory fanfare: melody, brass-like harmony,
+        // bass pulse, and a final sustained chord for level-20 clears.
+        const start = audio.currentTime;
+        const melody = [523, 659, 784, 1047, 784, 880, 1047, 1319, 1047, 1175, 1319, 1568];
+        melody.forEach((note, index) => {
+          const time = start + index * 0.16;
+          const isFinalNote = index === melody.length - 1;
+          createTone(note, isFinalNote ? 0.8 : 0.19, 0.052, index < 7 ? 'triangle' : 'square', time);
+          if (index % 2 === 0) createTone(note * 0.5, isFinalNote ? 0.68 : 0.16, 0.018, 'sine', time);
+        });
+        const chords = [
+          [130.81, 164.81, 196], [146.83, 174.61, 220], [164.81, 207.65, 246.94], [196, 246.94, 293.66],
+        ];
+        chords.forEach((chord, index) => {
+          const time = start + index * 0.48;
+          chord.forEach((note, noteIndex) => createTone(note * 2, index === 3 ? 1.05 : 0.44, 0.012 + noteIndex * 0.004, noteIndex === 1 ? 'triangle' : 'sine', time));
+          createTone(chord[0] * 0.5, 0.42, 0.038, 'triangle', time);
+          createKick(0.05, time);
+          if (index < 3) createNoiseBurst(0.04, 0.01, time + 0.24);
+        });
+        createTone(1046.5, 1.15, 0.025, 'sine', start + 1.82);
       } else {
         createTone(560, 0.06, 0.035, 'triangle');
       }
