@@ -1397,7 +1397,8 @@
         zone.beepTimer -= delta;
         if (zone.beepTimer <= 0 && zone.timer > 0) {
           zone.beepTimer = 0.25;
-          playSfx('bossAlert');
+          // The original meteor cue plays once when the boss slams. Do not
+          // stack it again for every target circle during the warning phase.
         }
         if (zone.timer > 0) continue;
         if (Math.hypot(player.x - zone.x, player.y - zone.y) < player.radius + zone.radius) {
