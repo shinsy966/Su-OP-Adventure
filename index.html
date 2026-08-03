@@ -661,6 +661,7 @@
 
     const SHIELD_DAMAGE_BY_RANK = [0, 28, 42, 60];
     const SHIELD_RADIUS_BY_RANK = [0, 70, 110, 160];
+    const SHIELD_PROJECTILE_BLOCK_CHANCE_BY_RANK = [0, 0.10, 0.25, 0.40];
     const SHURIKEN_BOSS_DAMAGE_BY_RANK = [0, 18, 24, 30];
     const DIFFICULTY_TIERS = [
       { enemyHpBonus: 0, enemyContactDamage: 0.55, enemyTargetCount: 52, spawnChance: 0.025, bossContactDamage: 28, bossProjectileDamage: 28 },
@@ -687,6 +688,10 @@
 
     function getShieldRadius() {
       return (SHIELD_RADIUS_BY_RANK[player.shieldRank] || 0) * player.areaMult;
+    }
+
+    function getShieldProjectileBlockChance() {
+      return SHIELD_PROJECTILE_BLOCK_CHANCE_BY_RANK[player.shieldRank] || 0;
     }
 
     function getShurikenOrbitRadius() {
@@ -1498,6 +1503,19 @@
         if (atk.life <= 0 || atk.x < -50 || atk.x > WORLD_WIDTH + 50 || atk.y < -50 || atk.y > WORLD_HEIGHT + 50) {
           attacks.splice(i, 1);
           continue;
+        }
+
+        if (atk.owner === 'enemy' && player.shieldRank > 0 && !atk.shieldBlockChecked) {
+          const shieldRadius = getShieldRadius();
+          if (Math.hypot(atk.x - player.x, atk.y - player.y) < atk.radius + shieldRadius) {
+            // A projectile gets one block roll as it crosses the shield. A
+            // failed roll must not repeat every frame while it travels inward.
+            atk.shieldBlockChecked = true;
+            if (Math.random() < getShieldProjectileBlockChance()) {
+              attacks.splice(i, 1);
+              continue;
+            }
+          }
         }
 
         if (atk.owner === 'boss' || atk.owner === 'enemy') {
@@ -3834,7 +3852,7 @@
         // Version the worker URL as well as its cache. This prevents a CDN
         // cached worker response from keeping installed Android PWAs on an
         // older release after the page itself has already updated.
-        navigator.serviceWorker.register('./sw.js?v=47', { updateViaCache: 'none' }).then((registration) => {
+        navigator.serviceWorker.register('./sw.js?v=48', { updateViaCache: 'none' }).then((registration) => {
           registration.update();
         }).catch(() => {});
       });
