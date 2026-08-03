@@ -465,6 +465,7 @@
         upgradeCycleDirections: {},
         claimed: {},
         claimedRewards: {},
+        seenAchievements: null,
         stage1Cleared: false,
         stats: { maxLevel: 1, enemies: 0, bosses: 0 },
       };
@@ -502,6 +503,9 @@
           claimed: savedClaims,
           // 이전 저장 파일의 보스 업적은 누락된 1토큰을 보정한다.
           claimedRewards: normalizedClaimedRewards,
+          seenAchievements: saved.seenAchievements && typeof saved.seenAchievements === 'object'
+            ? saved.seenAchievements
+            : null,
           needsRewardMigration: legacyBossTokenCorrection > 0,
           stage1Cleared: Boolean(saved.stage1Cleared) || Number(saved.stats?.bosses) >= 2,
           stats: {
@@ -573,7 +577,28 @@
     }
 
     function hasUnclaimedAchievement() {
-      return getClaimableAchievements().length > 0;
+      return getClaimableAchievements().some((achievement) => !profile.seenAchievements?.[achievement.key]);
+    }
+
+    function markAchievementsSeen() {
+      if (!profile.seenAchievements) profile.seenAchievements = {};
+      let changed = false;
+      ACHIEVEMENTS.forEach((achievement) => {
+        if (isAchievementUnlocked(achievement) && !profile.seenAchievements[achievement.key]) {
+          profile.seenAchievements[achievement.key] = true;
+          changed = true;
+        }
+      });
+      if (changed) saveProfile();
+    }
+
+    // Existing profiles predate the notification state. Treat their current
+    // achievements as already seen, then only light the badge for new unlocks.
+    markAchievementsSeen();
+
+    function openAchievements() {
+      markAchievementsSeen();
+      screen = 'achievements';
     }
 
     function hasAvailableUpgrade() {
@@ -3677,12 +3702,12 @@
         if (MOBILE_LAYOUT) {
         if (isInside(x, y, 54, 382, WIDTH - 108, 68)) openStageSelectOrStart();
         if (isInside(x, y, 54, 472, WIDTH - 108, 68)) screen = 'upgrades';
-        if (isInside(x, y, 54, 562, WIDTH - 108, 68)) screen = 'achievements';
+        if (isInside(x, y, 54, 562, WIDTH - 108, 68)) openAchievements();
         if (isInside(x, y, 54, 382, WIDTH - 108, 248)) return;
         }
         if (isInside(x, y, 520, 180, 260, 76)) openStageSelectOrStart();
         if (isInside(x, y, 520, 280, 260, 76)) screen = 'upgrades';
-        if (isInside(x, y, 520, 380, 260, 76)) screen = 'achievements';
+        if (isInside(x, y, 520, 380, 260, 76)) openAchievements();
         return;
       }
       if (screen === 'stageSelect') {
@@ -3800,7 +3825,7 @@
         // Version the worker URL as well as its cache. This prevents a CDN
         // cached worker response from keeping installed Android PWAs on an
         // older release after the page itself has already updated.
-        navigator.serviceWorker.register('./sw.js?v=44', { updateViaCache: 'none' }).then((registration) => {
+        navigator.serviceWorker.register('./sw.js?v=45', { updateViaCache: 'none' }).then((registration) => {
           registration.update();
         }).catch(() => {});
       });
