@@ -2854,10 +2854,12 @@
       const portraitMinutes = Math.floor(elapsed / 60);
       const portraitSeconds = Math.floor(elapsed % 60).toString().padStart(2, '0');
       ctx.fillStyle = gameOver ? 'rgba(0,0,0,0.82)' : 'rgba(5, 35, 35, 0.88)';
-      ctx.fillRect(32, 220, WIDTH - 64, gameOver ? 450 : (currentStage === 1 ? 470 : 390));
+      // Keep the final action inside the portrait victory panel with a clear
+      // lower margin. The previous stage-two panel ended behind the exit button.
+      ctx.fillRect(32, 220, WIDTH - 64, gameOver ? 450 : (currentStage === 1 ? 470 : 420));
       ctx.strokeStyle = gameOver ? '#f87171' : '#facc15';
       ctx.lineWidth = 3;
-      ctx.strokeRect(32, 220, WIDTH - 64, gameOver ? 450 : (currentStage === 1 ? 470 : 390));
+      ctx.strokeRect(32, 220, WIDTH - 64, gameOver ? 450 : (currentStage === 1 ? 470 : 420));
       ctx.fillStyle = gameOver ? '#fca5a5' : '#fef08a';
       ctx.font = 'bold 39px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
       ctx.textAlign = 'center';
@@ -3171,13 +3173,19 @@
     }
 
     function getAchievementLayout() {
-      let y = 190 - achievementScroll;
+      const portraitLayout = MOBILE_LAYOUT;
+      const rowSpacing = portraitLayout ? 36 : 42;
+      // A group title needs its own vertical space. At 18px it was painted
+      // first and then covered by the next achievement row, leaving only a
+      // sliver of the Korean text visible on mobile.
+      const groupSpacing = portraitLayout ? 34 : 28;
+      let y = (portraitLayout ? 142 : 190) - achievementScroll;
       let previousGroup = '';
       return ACHIEVEMENTS.map((achievement) => {
         const showGroup = achievement.group !== previousGroup;
-        if (showGroup) y += 28;
+        if (showGroup) y += groupSpacing;
         const row = { achievement, y, showGroup };
-        y += 42;
+        y += rowSpacing;
         previousGroup = achievement.group;
         return row;
       });
@@ -3195,24 +3203,24 @@
       ctx.fillText(`최고 레벨 ${profile.stats.maxLevel}  ·  처치 ${profile.stats.enemies.toLocaleString()}  ·  보스 ${profile.stats.bosses.toLocaleString()}`, WIDTH / 2, 100);
       ctx.save();
       ctx.beginPath();
-      ctx.rect(18, 132, WIDTH - 36, 608);
+      ctx.rect(18, 132, WIDTH - 36, 648);
       ctx.clip();
       getAchievementLayout().forEach(({ achievement, y, showGroup }) => {
         if (showGroup) {
           ctx.fillStyle = '#fbbf24';
           ctx.font = 'bold 16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
           ctx.textAlign = 'left';
-          ctx.fillText(achievement.group, 30, y - 30);
+          ctx.fillText(achievement.group, 30, y - 26);
         }
-        if (y < 152 || y > 726) return;
+        if (y < 152 || y > 766) return;
         const unlocked = isAchievementUnlocked(achievement);
         const claimed = isAchievementClaimed(achievement);
         ctx.fillStyle = unlocked ? '#2d1a4a' : '#21143a';
-        ctx.fillRect(28, y - 24, WIDTH - 70, 38);
+        ctx.fillRect(28, y - 20, WIDTH - 70, 32);
         ctx.strokeStyle = unlocked ? '#a855f7' : '#5b21b6';
-        ctx.strokeRect(28, y - 24, WIDTH - 70, 38);
+        ctx.strokeRect(28, y - 20, WIDTH - 70, 32);
         ctx.fillStyle = claimed ? '#fbbf24' : '#f8fafc';
-        ctx.fillRect(38, y - 19, 24, 24);
+        ctx.fillRect(38, y - 15, 20, 20);
         ctx.fillStyle = '#fff';
         ctx.font = '16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
         ctx.fillText(achievement.label, 76, y);
@@ -3224,7 +3232,7 @@
         }
       });
       ctx.restore();
-      drawButton(150, 780, 240, 54, '메인으로');
+      drawButton(150, 820, 240, 54, '메인으로');
       return;
       }
       ctx.fillStyle = '#fff';
@@ -3727,15 +3735,15 @@
       }
       if (screen === 'achievements') {
         if (MOBILE_LAYOUT) {
-        if (isInside(x, y, 150, 780, 240, 54)) {
+        if (isInside(x, y, 150, 820, 240, 54)) {
           screen = 'menu';
           return;
         }
         getAchievementLayout().forEach(({ achievement, y: portraitRowY }) => {
-          if (!isInside(x, y, 28, portraitRowY - 24, WIDTH - 70, 38)) return;
+          if (!isInside(x, y, 28, portraitRowY - 20, WIDTH - 70, 32)) return;
           claimAchievement(achievement);
         });
-        if (x >= 28 && x <= WIDTH - 42 && y >= 132 && y <= 740) return;
+        if (x >= 28 && x <= WIDTH - 42 && y >= 132 && y <= 780) return;
         }
         if (isInside(x, y, 530, 550, 160, 48)) {
           screen = 'menu';
@@ -3749,7 +3757,7 @@
     });
 
     canvas.addEventListener('wheel', (event) => {
-      if (screen !== 'achievements') return;
+      if (screen !== 'achievements' || MOBILE_LAYOUT) return;
       event.preventDefault();
       const maxScroll = Math.max(0, ACHIEVEMENTS.length * 42 + 84 - 390);
       achievementScroll = clamp(achievementScroll + event.deltaY * 0.7, 0, maxScroll);
