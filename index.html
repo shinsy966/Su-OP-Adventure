@@ -3484,7 +3484,7 @@
       drawSafely('player', drawPlayer);
       drawSafely('shurikens', drawShurikens);
       drawSafely('UI', drawUI);
-      drawSafely('touch controls', drawTouchJoystick);
+      // Touch movement stays enabled; only the on-screen joystick graphic is hidden.
       drawSafely('boss alert', drawBossAlert);
       drawSafely('augment choices', drawChoiceOverlay);
       drawSafely('game-over panel', drawOverlay);
@@ -3796,7 +3796,7 @@
         // Version the worker URL as well as its cache. This prevents a CDN
         // cached worker response from keeping installed Android PWAs on an
         // older release after the page itself has already updated.
-        navigator.serviceWorker.register('./sw.js?v=41', { updateViaCache: 'none' }).then((registration) => {
+        navigator.serviceWorker.register('./sw.js?v=42', { updateViaCache: 'none' }).then((registration) => {
           registration.update();
         }).catch(() => {});
       });
