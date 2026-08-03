@@ -3201,14 +3201,14 @@
       drawButton(530, 530, 160, 52, '메인으로');
     }
 
-    function getAchievementLayout() {
+    function getAchievementLayout(scrollOffset = achievementScroll) {
       const portraitLayout = MOBILE_LAYOUT;
       const rowSpacing = portraitLayout ? 36 : 42;
       // A group title needs its own vertical space. At 18px it was painted
       // first and then covered by the next achievement row, leaving only a
       // sliver of the Korean text visible on mobile.
       const groupSpacing = portraitLayout ? 34 : 28;
-      let y = (portraitLayout ? 142 : 190) - achievementScroll;
+      let y = (portraitLayout ? 142 : 190) - scrollOffset;
       let previousGroup = '';
       return ACHIEVEMENTS.map((achievement) => {
         const showGroup = achievement.group !== previousGroup;
@@ -3218,6 +3218,14 @@
         previousGroup = achievement.group;
         return row;
       });
+    }
+
+    function getAchievementScrollMax() {
+      const layout = getAchievementLayout(0);
+      const lastRow = layout[layout.length - 1];
+      const viewportBottom = MOBILE_LAYOUT ? 780 : 535;
+      const rowBottomOffset = MOBILE_LAYOUT ? 12 : 10;
+      return Math.max(0, lastRow.y + rowBottomOffset - viewportBottom);
     }
 
     function drawAchievements() {
@@ -3324,7 +3332,7 @@
       ctx.restore();
       ctx.fillStyle = 'rgba(255,255,255,0.16)';
       ctx.fillRect(700, 145, 8, 390);
-      const maxScroll = Math.max(0, ACHIEVEMENTS.length * 42 + 84 - 390);
+      const maxScroll = getAchievementScrollMax();
       const thumbHeight = Math.max(45, 390 * (390 / (390 + maxScroll)));
       const thumbY = 145 + (maxScroll ? (achievementScroll / maxScroll) * (390 - thumbHeight) : 0);
       ctx.fillStyle = '#a78bfa';
@@ -3791,7 +3799,7 @@
     canvas.addEventListener('wheel', (event) => {
       if (screen !== 'achievements' || MOBILE_LAYOUT) return;
       event.preventDefault();
-      const maxScroll = Math.max(0, ACHIEVEMENTS.length * 42 + 84 - 390);
+      const maxScroll = getAchievementScrollMax();
       achievementScroll = clamp(achievementScroll + event.deltaY * 0.7, 0, maxScroll);
     }, { passive: false });
 
@@ -3825,7 +3833,7 @@
         // Version the worker URL as well as its cache. This prevents a CDN
         // cached worker response from keeping installed Android PWAs on an
         // older release after the page itself has already updated.
-        navigator.serviceWorker.register('./sw.js?v=45', { updateViaCache: 'none' }).then((registration) => {
+        navigator.serviceWorker.register('./sw.js?v=46', { updateViaCache: 'none' }).then((registration) => {
           registration.update();
         }).catch(() => {});
       });
