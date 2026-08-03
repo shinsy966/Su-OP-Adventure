@@ -3223,6 +3223,9 @@
         ctx.fillRect(38, y - 15, 20, 20);
         ctx.fillStyle = '#fff';
         ctx.font = '16px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
+        // Rewards use right alignment. Reset it for every row so the next
+        // achievement label cannot be drawn beneath its checkbox.
+        ctx.textAlign = 'left';
         ctx.fillText(achievement.label, 76, y);
         if (claimed || unlocked) {
           ctx.font = '13px "IBM Plex Sans KR", "Malgun Gothic", sans-serif';
