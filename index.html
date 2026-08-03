@@ -69,6 +69,8 @@
     // 기기별 논리 해상도. 실제 캔버스는 기기 픽셀 비율만큼 크게 만들어 선명하게 그린다.
     const WIDTH = MOBILE_LAYOUT ? 540 : 860;
     const HEIGHT = MOBILE_LAYOUT ? 960 : 620;
+    const MOBILE_UNIT_SCALE = 0.95;
+    const MOBILE_BOSS_SCALE = MOBILE_UNIT_SCALE * 0.9;
     function configureCanvasResolution() {
       const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(WIDTH * pixelRatio);
@@ -427,7 +429,7 @@
     const player = {
       x: WORLD_WIDTH / 2,
       y: WORLD_HEIGHT / 2,
-      radius: 22,
+      radius: 22 * (MOBILE_LAYOUT ? MOBILE_UNIT_SCALE : 1),
       speed: 260,
       hp: 100,
       maxHp: 100,
@@ -789,7 +791,8 @@
         enemy = {
           x: Math.random() * WORLD_WIDTH,
           y: Math.random() * WORLD_HEIGHT,
-          radius: isSnowStage ? 18 + Math.random() * 8 : 12 + Math.random() * 8,
+          radius: (isSnowStage ? 18 + Math.random() * 8 : 12 + Math.random() * 8)
+            * (MOBILE_LAYOUT ? MOBILE_UNIT_SCALE : 1),
           speed: isSnowStage ? 58 + Math.random() * 62 : (70 + Math.random() * 80) * 0.9,
           hp: (14 + Math.random() * 8 + difficulty.enemyHpBonus) * (isSnowStage ? 1.1 : 1),
           color: isSnowStage ? '#c4b5fd' : (Math.random() < 0.5 ? '#3b82f6' : '#f59e0b'),
@@ -921,7 +924,7 @@
       boss = {
         x: WORLD_WIDTH / 2,
         y: WORLD_HEIGHT / 2,
-        radius: 70,
+        radius: 70 * (MOBILE_LAYOUT ? MOBILE_BOSS_SCALE : 1),
         hp,
         maxHp: hp,
         speed: isSnowStage ? 108 : 99,
@@ -1279,11 +1282,11 @@
       attacks.push({
         x: enemy.x,
         y: enemy.y,
-        radius: 10,
+        radius: 10 * (MOBILE_LAYOUT ? MOBILE_UNIT_SCALE : 1),
         vx: (dx / distance) * 220,
         vy: (dy / distance) * 220,
         damage: 12,
-        life: 2.4,
+        life: 2.4 * (MOBILE_LAYOUT ? MOBILE_UNIT_SCALE : 1),
         color: '#a5f3fc',
         owner: 'enemy',
         style: 'iceBolt',
@@ -1703,7 +1706,6 @@
     }
 
     function drawPlayer() {
-      const actorVisualScale = MOBILE_LAYOUT ? 0.95 : 1;
       const attackProgress = Math.max(0, Math.min(1, (player.attackVisual || 0) / 0.18));
       const attackPulse = Math.sin(attackProgress * Math.PI);
       const visualX = player.x + (player.attackDirX || 0) * attackPulse * 5;
@@ -1715,11 +1717,10 @@
 
       ctx.save();
       ctx.globalAlpha = reviveBlinkAlpha;
-      if (!drawSprite('player', visualX, visualY, player.radius * 2.2 * actorVisualScale, lean)) {
+      if (!drawSprite('player', visualX, visualY, player.radius * 2.2, lean)) {
         ctx.save();
         ctx.translate(visualX - camera.x, visualY - camera.y);
         ctx.rotate(lean);
-        ctx.scale(actorVisualScale, actorVisualScale);
         ctx.fillStyle = player.color;
         ctx.beginPath();
         ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
@@ -1860,6 +1861,7 @@
         } else if (atk.style === 'iceBolt') {
           const angle = Math.atan2(atk.vy, atk.vx);
           ctx.rotate(angle);
+          ctx.scale(atk.radius / 10, atk.radius / 10);
           const shimmer = 0.72 + Math.sin((atk.life || 0) * 16) * 0.18;
           ctx.shadowColor = '#67e8f9';
           ctx.shadowBlur = 16;
@@ -2123,7 +2125,6 @@
 
     function drawBoss() {
       if (!boss) return;
-      const actorVisualScale = MOBILE_LAYOUT ? 0.95 : 1;
       if (boss.slamPunchTimer > 0) {
         const punchProgress = 1 - boss.slamPunchTimer / 0.55;
         ctx.save();
@@ -2152,10 +2153,9 @@
         ctx.stroke();
         ctx.restore();
       }
-      if (!drawSprite(boss.sprite, boss.x, boss.y, boss.radius * 2.2 * actorVisualScale)) {
+      if (!drawSprite(boss.sprite, boss.x, boss.y, boss.radius * 2.2)) {
         ctx.save();
         ctx.translate(boss.x - camera.x, boss.y - camera.y);
-        ctx.scale(actorVisualScale, actorVisualScale);
         ctx.fillStyle = boss.color;
         ctx.beginPath();
         ctx.arc(0, 0, boss.radius, 0, Math.PI * 2);
@@ -3800,7 +3800,7 @@
         // Version the worker URL as well as its cache. This prevents a CDN
         // cached worker response from keeping installed Android PWAs on an
         // older release after the page itself has already updated.
-        navigator.serviceWorker.register('./sw.js?v=43', { updateViaCache: 'none' }).then((registration) => {
+        navigator.serviceWorker.register('./sw.js?v=44', { updateViaCache: 'none' }).then((registration) => {
           registration.update();
         }).catch(() => {});
       });
