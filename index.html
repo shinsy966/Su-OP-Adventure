@@ -1703,6 +1703,7 @@
     }
 
     function drawPlayer() {
+      const actorVisualScale = MOBILE_LAYOUT ? 0.95 : 1;
       const attackProgress = Math.max(0, Math.min(1, (player.attackVisual || 0) / 0.18));
       const attackPulse = Math.sin(attackProgress * Math.PI);
       const visualX = player.x + (player.attackDirX || 0) * attackPulse * 5;
@@ -1714,10 +1715,11 @@
 
       ctx.save();
       ctx.globalAlpha = reviveBlinkAlpha;
-      if (!drawSprite('player', visualX, visualY, player.radius * 2.2, lean)) {
+      if (!drawSprite('player', visualX, visualY, player.radius * 2.2 * actorVisualScale, lean)) {
         ctx.save();
         ctx.translate(visualX - camera.x, visualY - camera.y);
         ctx.rotate(lean);
+        ctx.scale(actorVisualScale, actorVisualScale);
         ctx.fillStyle = player.color;
         ctx.beginPath();
         ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
@@ -2121,6 +2123,7 @@
 
     function drawBoss() {
       if (!boss) return;
+      const actorVisualScale = MOBILE_LAYOUT ? 0.95 : 1;
       if (boss.slamPunchTimer > 0) {
         const punchProgress = 1 - boss.slamPunchTimer / 0.55;
         ctx.save();
@@ -2149,9 +2152,10 @@
         ctx.stroke();
         ctx.restore();
       }
-      if (!drawSprite(boss.sprite, boss.x, boss.y, boss.radius * 2.2)) {
+      if (!drawSprite(boss.sprite, boss.x, boss.y, boss.radius * 2.2 * actorVisualScale)) {
         ctx.save();
         ctx.translate(boss.x - camera.x, boss.y - camera.y);
+        ctx.scale(actorVisualScale, actorVisualScale);
         ctx.fillStyle = boss.color;
         ctx.beginPath();
         ctx.arc(0, 0, boss.radius, 0, Math.PI * 2);
@@ -3796,7 +3800,7 @@
         // Version the worker URL as well as its cache. This prevents a CDN
         // cached worker response from keeping installed Android PWAs on an
         // older release after the page itself has already updated.
-        navigator.serviceWorker.register('./sw.js?v=42', { updateViaCache: 'none' }).then((registration) => {
+        navigator.serviceWorker.register('./sw.js?v=43', { updateViaCache: 'none' }).then((registration) => {
           registration.update();
         }).catch(() => {});
       });
